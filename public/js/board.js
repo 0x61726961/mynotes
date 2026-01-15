@@ -100,6 +100,28 @@ const Board = (() => {
     panOffset.x = Math.max(minVisible - bw, Math.min(vw - minVisible, panOffset.x));
     panOffset.y = Math.max(minVisible - bh, Math.min(vh - minVisible, panOffset.y));
   }
+
+  /**
+   * Get a board position centered in the current viewport
+   * @returns {{x: number, y: number}}
+   */
+  function getViewportCenterPosition() {
+    if (!viewport || !corkboard) {
+      return Notes.clampPosition(
+        Notes.BOARD_WIDTH / 2 - Notes.NOTE_SIZE / 2,
+        Notes.BOARD_HEIGHT / 2 - Notes.NOTE_SIZE / 2
+      );
+    }
+
+    const viewportRect = viewport.getBoundingClientRect();
+    const boardRect = corkboard.getBoundingClientRect();
+    const centerX = viewportRect.left + viewportRect.width / 2;
+    const centerY = viewportRect.top + viewportRect.height / 2;
+    const x = centerX - boardRect.left - Notes.NOTE_SIZE / 2;
+    const y = centerY - boardRect.top - Notes.NOTE_SIZE / 2;
+
+    return Notes.clampPosition(x, y);
+  }
   
   // Pan handlers
   function handlePanStart(e) {
@@ -365,14 +387,14 @@ const Board = (() => {
     const x = parseFloat(draggedNote.style.left);
     const y = parseFloat(draggedNote.style.top);
     
-    draggedNote.classList.remove('dragging');
-    draggedNote.classList.add('dropping');
-    bringNoteToFront(draggedNote);
+    const releasedNote = draggedNote;
+
+    releasedNote.classList.remove('dragging');
+    releasedNote.classList.add('dropping');
+    bringNoteToFront(releasedNote);
     
     setTimeout(() => {
-      if (draggedNote) {
-        draggedNote.classList.remove('dropping');
-      }
+      releasedNote.classList.remove('dropping');
     }, 300);
     
     // Notify callback
@@ -590,6 +612,7 @@ const Board = (() => {
     clearNotes,
     getNoteElement,
     getDraggingNoteId,
-    setupNoteDragging
+    setupNoteDragging,
+    getViewportCenterPosition
   };
 })();

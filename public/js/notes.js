@@ -92,15 +92,22 @@ const Notes = (() => {
    * @param {string} color - Note color
    * @returns {object} Note payload
    */
-  function createPayload(type, data, color) {
+  function createPayload(type, data, color, position) {
     // Random position near center of board
-    const x = BOARD_WIDTH / 2 - NOTE_SIZE / 2 + (Math.random() - 0.5) * 400;
-    const y = BOARD_HEIGHT / 2 - NOTE_SIZE / 2 + (Math.random() - 0.5) * 300;
-    
+    let x = BOARD_WIDTH / 2 - NOTE_SIZE / 2 + (Math.random() - 0.5) * 400;
+    let y = BOARD_HEIGHT / 2 - NOTE_SIZE / 2 + (Math.random() - 0.5) * 300;
+
+    if (position && Number.isFinite(position.x) && Number.isFinite(position.y)) {
+      x = position.x;
+      y = position.y;
+    }
+
+    const clamped = clampPosition(x, y);
+
     const payload = {
       type,
-      x: Math.max(0, Math.min(BOARD_WIDTH - NOTE_SIZE, x)),
-      y: Math.max(0, Math.min(BOARD_HEIGHT - NOTE_SIZE, y)),
+      x: clamped.x,
+      y: clamped.y,
       rot: randomRotation(),
       color: color || randomColor(),
       created_at: Date.now(),
@@ -183,8 +190,8 @@ const Notes = (() => {
    * @param {string} color
    * @returns {Promise<object>} Created note with ID
    */
-  async function createNote(type, data, color) {
-    const payload = createPayload(type, data, color);
+  async function createNote(type, data, color, position) {
+    const payload = createPayload(type, data, color, position);
     const encryptedPayload = await Crypto.encryptPayload(encryptionKey, payload);
     
     const response = await fetch('/api/notes/create', {

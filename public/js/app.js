@@ -11,6 +11,7 @@ const App = (() => {
   let contextMenu;
   let loadingOverlay, loadingText;
   let doodleBrushButtons, doodleEraserBtn;
+  let addFabContainer, addFabButton, addFabMenu;
   
   // State
   let currentBoardId = null;
@@ -18,6 +19,7 @@ const App = (() => {
   let selectedColor = 'yellow';
   let currentEditNoteId = null;
   let imageData = null;
+  let pendingDraftNoteId = null;
   
   // Debounce for saves
   let pendingSaveTimers = new Map();
@@ -52,10 +54,15 @@ const App = (() => {
     loadingText = document.getElementById('loading-text');
     doodleBrushButtons = document.querySelectorAll('.doodle-tool-btn');
     doodleEraserBtn = document.getElementById('doodle-eraser');
+    addFabContainer = document.getElementById('add-fab-container');
+    addFabButton = document.getElementById('add-fab');
+    addFabMenu = document.getElementById('add-fab-menu');
     
     // Setup event listeners
     setupLoginEvents();
     applyRememberedRoom();
+    attemptAutoJoin();
+    setupFabEvents();
     setupToolbarEvents();
     setupModalEvents();
     setupContextMenu();
@@ -92,19 +99,71 @@ const App = (() => {
   }
   
   /**
+   * Setup floating action button events
+   */
+  function setupFabEvents() {
+    if (!addFabContainer || !addFabButton || !addFabMenu) return;
+
+    addFabButton.addEventListener('click', () => {
+      toggleAddFabMenu();
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!addFabContainer.contains(e.target)) {
+        closeAddFabMenu();
+      }
+    });
+  }
+
+  function openAddFabMenu() {
+    if (!addFabContainer || !addFabButton || !addFabMenu) return;
+    addFabContainer.classList.add('open');
+    addFabButton.setAttribute('aria-expanded', 'true');
+    addFabMenu.setAttribute('aria-hidden', 'false');
+  }
+
+  function closeAddFabMenu() {
+    if (!addFabContainer || !addFabButton || !addFabMenu) return;
+    addFabContainer.classList.remove('open');
+    addFabButton.setAttribute('aria-expanded', 'false');
+    addFabMenu.setAttribute('aria-hidden', 'true');
+  }
+
+  function toggleAddFabMenu() {
+    if (!addFabContainer) return;
+    if (addFabContainer.classList.contains('open')) {
+      closeAddFabMenu();
+    } else {
+      openAddFabMenu();
+    }
+  }
+
+  /**
    * Setup toolbar events
    */
   function setupToolbarEvents() {
-    document.getElementById('add-text-btn').addEventListener('click', () => {
-      openTextModal();
+    document.getElementById('add-text-btn').addEventListener('click', async () => {
+      closeAddFabMenu();
+      const draftNote = await createDraftNote('text');
+      if (draftNote) {
+        openTextModal(draftNote);
+      }
     });
     
-    document.getElementById('add-image-btn').addEventListener('click', () => {
-      openImageModal();
+    document.getElementById('add-image-btn').addEventListener('click', async () => {
+      closeAddFabMenu();
+      const draftNote = await createDraftNote('image');
+      if (draftNote) {
+        openImageModal(draftNote);
+      }
     });
     
-    document.getElementById('add-doodle-btn').addEventListener('click', () => {
-      openDoodleModal();
+    document.getElementById('add-doodle-btn').addEventListener('click', async () => {
+      closeAddFabMenu();
+      const draftNote = await createDraftNote('doodle');
+      if (draftNote) {
+        openDoodleModal(draftNote);
+      }
     });
     
     document.getElementById('logout-btn').addEventListener('click', () => {
@@ -341,6 +400,52 @@ const App = (() => {
     const note = Notes.getNote(noteId);
     return note?.payload?.rot ?? 0;
   }
+
+  function getNewNotePosition() {
+    if (typeof Board.getViewportCenterPosition === 'function') {
+      return Board.getViewportCenterPosition();
+    }
+    return null;
+  }
+
+  async function createDraftNote(type) {
+    try {
+      const position = getNewNotePosition();
+      const color = Notes.randomColor();
+      const data = type === 'text'
+        ? { text: '' }
+        : type === 'image'
+          ? { img: null }
+          : { doodle: null };
+
+      markLocalChange();
+      const note = await Notes.createNote(type, data, color, position);
+      const noteEl = Notes.renderNote(note);
+      Board.addNote(noteEl);
+      pendingDraftNoteId = note.id;
+      return note;
+    } catch (err) {
+      console.error('Failed to create draft note:', err);
+      alert('Failed to create note');
+      return null;
+    }
+  }
+
+  async function discardDraftNote() {
+    if (!pendingDraftNoteId) return;
+    const draftId = pendingDraftNoteId;
+    pendingDraftNoteId = null;
+    currentEditNoteId = null;
+
+    try {
+      markLocalChange();
+      await Notes.deleteNote(draftId);
+    } catch (err) {
+      console.error('Failed to discard draft note:', err);
+    } finally {
+      Board.removeNote(draftId);
+    }
+  }
   
   /**
    * Run a note update with refresh protection
@@ -385,14 +490,22 @@ const App = (() => {
    * Logout and return to login screen
    */
   function logout() {
+    const wasRemembering = rememberRoomCheckbox?.checked;
+    const lastRoom = localStorage.getItem(LAST_ROOM_KEY) || '';
+
     currentBoardId = null;
     encryptionKey = null;
     Board.clearNotes();
     stopNotesRefresh();
     
+    clearAutoJoinPreference();
     boardScreen.classList.remove('active');
     loginScreen.classList.add('active');
-    applyRememberedRoom();
+
+    if (rememberRoomCheckbox) {
+      rememberRoomCheckbox.checked = Boolean(wasRemembering);
+    }
+    passphraseInput.value = wasRemembering ? lastRoom : '';
   }
   
   /**
@@ -519,6 +632,7 @@ const App = (() => {
   function closeTextModal() {
     textModal.classList.remove('active');
     currentEditNoteId = null;
+    discardDraftNote();
   }
   
   /**
@@ -530,6 +644,8 @@ const App = (() => {
       alert('Please enter some text');
       return;
     }
+
+    const isDraft = pendingDraftNoteId && currentEditNoteId === pendingDraftNoteId;
     
     try {
       if (currentEditNoteId) {
@@ -548,9 +664,14 @@ const App = (() => {
       } else {
         // Create new note
         markLocalChange();
-        const note = await Notes.createNote('text', { text }, selectedColor);
+        const position = getNewNotePosition();
+        const note = await Notes.createNote('text', { text }, selectedColor, position);
         const noteEl = Notes.renderNote(note);
         Board.addNote(noteEl);
+      }
+
+      if (isDraft) {
+        pendingDraftNoteId = null;
       }
       
       closeTextModal();
@@ -563,12 +684,30 @@ const App = (() => {
   /**
    * Open image modal
    */
-  function openImageModal() {
+  function openImageModal(existingNote = null) {
     imageData = null;
-    document.getElementById('image-input').value = '';
-    document.getElementById('image-preview').classList.remove('has-image');
-    document.getElementById('save-image-btn').disabled = true;
-    selectColor(Notes.randomColor());
+    const imageInput = document.getElementById('image-input');
+    const imagePreview = document.getElementById('image-preview');
+    const saveButton = document.getElementById('save-image-btn');
+
+    imageInput.value = '';
+    imagePreview.classList.remove('has-image');
+    saveButton.disabled = true;
+
+    if (existingNote) {
+      currentEditNoteId = existingNote.id;
+      selectColor(existingNote.payload.color);
+      if (existingNote.payload.img) {
+        imageData = existingNote.payload.img;
+        ImageProcessor.renderToCanvas(imagePreview, imageData);
+        imagePreview.classList.add('has-image');
+        saveButton.disabled = false;
+      }
+    } else {
+      currentEditNoteId = null;
+      selectColor(Notes.randomColor());
+    }
+
     imageModal.classList.add('active');
   }
   
@@ -578,6 +717,8 @@ const App = (() => {
   function closeImageModal() {
     imageModal.classList.remove('active');
     imageData = null;
+    currentEditNoteId = null;
+    discardDraftNote();
   }
   
   /**
@@ -607,12 +748,32 @@ const App = (() => {
    */
   async function saveImageNote() {
     if (!imageData) return;
+
+    const isDraft = pendingDraftNoteId && currentEditNoteId === pendingDraftNoteId;
     
     try {
-      markLocalChange();
-      const note = await Notes.createNote('image', { img: imageData }, selectedColor);
-      const noteEl = Notes.renderNote(note);
-      Board.addNote(noteEl);
+      if (currentEditNoteId) {
+        markLocalChange();
+        await runNoteUpdate(currentEditNoteId, { img: imageData, color: selectedColor });
+        const note = Notes.getNote(currentEditNoteId);
+        const oldEl = Board.getNoteElement(currentEditNoteId);
+        if (oldEl && note) {
+          const newEl = Notes.renderNote(note);
+          oldEl.replaceWith(newEl);
+          Board.setupNoteDragging(newEl);
+        }
+      } else {
+        markLocalChange();
+        const position = getNewNotePosition();
+        const note = await Notes.createNote('image', { img: imageData }, selectedColor, position);
+        const noteEl = Notes.renderNote(note);
+        Board.addNote(noteEl);
+      }
+
+      if (isDraft) {
+        pendingDraftNoteId = null;
+      }
+
       closeImageModal();
     } catch (err) {
       console.error('Failed to save image note:', err);
@@ -623,11 +784,19 @@ const App = (() => {
   /**
    * Open doodle modal
    */
-  function openDoodleModal() {
+  function openDoodleModal(existingNote = null) {
     DoodleEditor.clear();
     DoodleEditor.resetTools();
     updateDoodleToolUI();
-    selectColor(Notes.randomColor());
+
+    if (existingNote) {
+      currentEditNoteId = existingNote.id;
+      selectColor(existingNote.payload.color);
+    } else {
+      currentEditNoteId = null;
+      selectColor(Notes.randomColor());
+    }
+
     doodleModal.classList.add('active');
   }
   
@@ -636,8 +805,10 @@ const App = (() => {
    */
   function closeDoodleModal() {
     doodleModal.classList.remove('active');
+    currentEditNoteId = null;
+    discardDraftNote();
   }
-  
+
   /**
    * Save doodle note
    */
@@ -646,13 +817,33 @@ const App = (() => {
       alert('Please draw something first');
       return;
     }
+
+    const isDraft = pendingDraftNoteId && currentEditNoteId === pendingDraftNoteId;
     
     try {
       const doodleData = DoodleEditor.getData();
-      markLocalChange();
-      const note = await Notes.createNote('doodle', { doodle: doodleData }, selectedColor);
-      const noteEl = Notes.renderNote(note);
-      Board.addNote(noteEl);
+      if (currentEditNoteId) {
+        markLocalChange();
+        await runNoteUpdate(currentEditNoteId, { doodle: doodleData, color: selectedColor });
+        const note = Notes.getNote(currentEditNoteId);
+        const oldEl = Board.getNoteElement(currentEditNoteId);
+        if (oldEl && note) {
+          const newEl = Notes.renderNote(note);
+          oldEl.replaceWith(newEl);
+          Board.setupNoteDragging(newEl);
+        }
+      } else {
+        markLocalChange();
+        const position = getNewNotePosition();
+        const note = await Notes.createNote('doodle', { doodle: doodleData }, selectedColor, position);
+        const noteEl = Notes.renderNote(note);
+        Board.addNote(noteEl);
+      }
+
+      if (isDraft) {
+        pendingDraftNoteId = null;
+      }
+
       closeDoodleModal();
     } catch (err) {
       console.error('Failed to save doodle note:', err);
@@ -708,6 +899,13 @@ const App = (() => {
     }
   }
 
+  function attemptAutoJoin() {
+    const shouldRemember = rememberRoomCheckbox?.checked;
+    const passphrase = passphraseInput.value.trim();
+    if (!shouldRemember || !passphrase) return;
+    openBoard();
+  }
+
   function persistRememberedRoom(passphrase) {
     if (!rememberRoomCheckbox?.checked) {
       clearRememberedRoom();
@@ -728,6 +926,14 @@ const App = (() => {
       localStorage.removeItem(LAST_ROOM_KEY);
     } catch (err) {
       console.warn('Unable to clear remembered room:', err);
+    }
+  }
+
+  function clearAutoJoinPreference() {
+    try {
+      localStorage.removeItem(REMEMBER_ROOM_KEY);
+    } catch (err) {
+      console.warn('Unable to clear auto-join preference:', err);
     }
   }
 

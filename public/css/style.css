@@ -193,38 +193,96 @@ html, body {
   flex-direction: column;
 }
 
-/* Toolbar */
-#toolbar {
+/* Floating action buttons */
+.fab-btn {
+  width: 50px;
+  height: 50px;
+  border: none;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.85);
+  color: #333;
+  font-size: 1.4rem;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
   display: flex;
   align-items: center;
-  padding: 0.5rem 1rem;
+  justify-content: center;
+  transition: transform 0.15s, box-shadow 0.2s, background 0.2s;
+}
+
+.fab-btn:hover {
+  background: #fff;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+}
+
+.fab-btn:active {
+  transform: scale(0.96);
+}
+
+.fab-top-right {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1500;
+}
+
+.fab-container {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 1500;
+}
+
+.fab-primary {
   background: var(--cork-dark);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-  z-index: 100;
+  color: #fff;
 }
 
-.toolbar-btn {
-  width: 44px;
-  height: 44px;
-  margin-right: 0.5rem;
+.fab-primary:hover {
+  background: #6f5a41;
+}
+
+.fab-menu {
+  position: absolute;
+  right: 0;
+  bottom: 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  opacity: 0;
+  transform: translateY(10px) scale(0.96);
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.fab-option {
+  width: 50px;
+  height: 50px;
   border: none;
-  border-radius: 8px;
-  background: rgba(255,255,255,0.15);
-  font-size: 1.3rem;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.85);
+  font-size: 1.2rem;
   cursor: pointer;
-  transition: background 0.2s, transform 0.1s;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s, box-shadow 0.2s, background 0.2s;
 }
 
-.toolbar-btn:hover {
-  background: rgba(255,255,255,0.25);
+.fab-option:hover {
+  background: #fff;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.3);
 }
 
-.toolbar-btn:active {
-  transform: scale(0.95);
+.fab-container.open .fab-menu {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
 }
 
-.toolbar-spacer {
-  flex: 1;
+.fab-container.open .fab-primary {
+  transform: rotate(45deg);
 }
 
 /* Board Viewport */
@@ -311,7 +369,7 @@ html, body {
   cursor: grabbing;
   box-shadow: var(--note-shadow-drag);
   z-index: 1000;
-  opacity: 0.92;
+  opacity: 0.8;
   transition: none;
   will-change: left, top, transform;
 }
@@ -621,14 +679,21 @@ html, body {
     font-size: 1.5rem;
   }
   
-  #toolbar {
-    padding: 0.4rem 0.5rem;
-  }
-  
-  .toolbar-btn {
-    width: 40px;
-    height: 40px;
+  .fab-btn,
+  .fab-option {
+    width: 44px;
+    height: 44px;
     font-size: 1.1rem;
+  }
+
+  .fab-top-right {
+    top: 16px;
+    right: 16px;
+  }
+
+  .fab-container {
+    right: 16px;
+    bottom: 16px;
   }
   
   .note-editor {
