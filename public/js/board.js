@@ -4,7 +4,7 @@
 
 const Board = (() => {
   const DRAG_Z_INDEX = Number.MAX_SAFE_INTEGER;
-  const ROTATION_EDGE_SIZE = 16;
+  const ROTATION_EDGE_SIZE = 24;
   let viewport = null;
   let corkboard = null;
   let panOffset = { x: 0, y: 0 };
@@ -24,6 +24,7 @@ const Board = (() => {
   let isRotating = false;
   let rotatingNote = null;
   let rotateStart = 0;
+  let rotationAccumulated = 0;
   let initialRotation = 0;
   let rotationRafId = null;
   let pendingRotationPoint = null;
@@ -351,6 +352,7 @@ const Board = (() => {
     const clientY = e.clientY || e.touches[0].clientY;
     
     rotateStart = Math.atan2(clientY - centerY, clientX - centerX);
+    rotationAccumulated = 0;
     
     const note = Notes.getNote(noteEl.dataset.noteId);
     initialRotation = note ? note.payload.rot : 0;
@@ -392,12 +394,18 @@ const Board = (() => {
     const centerY = rect.top + rect.height / 2;
     
     const angle = Math.atan2(clientY - centerY, clientX - centerX);
-    const deltaAngle = (angle - rotateStart) * (180 / Math.PI);
-    
-    let newRotation = initialRotation + deltaAngle;
-    
-    // Clamp rotation to reasonable range
-    newRotation = Math.max(-45, Math.min(45, newRotation));
+    let deltaAngle = angle - rotateStart;
+
+    if (deltaAngle > Math.PI) {
+      deltaAngle -= Math.PI * 2;
+    } else if (deltaAngle < -Math.PI) {
+      deltaAngle += Math.PI * 2;
+    }
+
+    rotationAccumulated += deltaAngle;
+    rotateStart = angle;
+
+    const newRotation = initialRotation + rotationAccumulated * (180 / Math.PI);
     
     const x = parseFloat(rotatingNote.style.left);
     const y = parseFloat(rotatingNote.style.top);
