@@ -3,26 +3,28 @@
  */
 
 const Board = (() => {
-  const THROTTLE_MS = 1000 / 30; // 30fps throttle
-  
   let viewport = null;
   let corkboard = null;
   let panOffset = { x: 0, y: 0 };
   let isPanning = false;
   let panStart = { x: 0, y: 0 };
-  let lastPanTime = 0;
+  let panRafId = null;
+  let pendingPanPoint = null;
   
   // Note dragging state
   let draggedNote = null;
   let dragOffset = { x: 0, y: 0 };
   let isDragging = false;
-  let lastDragTime = 0;
+  let dragRafId = null;
+  let pendingDragPoint = null;
   
   // Rotation state
   let isRotating = false;
   let rotatingNote = null;
   let rotateStart = 0;
   let initialRotation = 0;
+  let rotationRafId = null;
+  let pendingRotationPoint = null;
   
   // Callbacks
   let onNoteMove = null;
@@ -76,7 +78,7 @@ const Board = (() => {
    * Update board transform
    */
   function updateBoardPosition() {
-    corkboard.style.transform = `translate(${panOffset.x}px, ${panOffset.y}px)`;
+    corkboard.style.transform = `translate3d(${panOffset.x}px, ${panOffset.y}px, 0)`;
   }
   
   /**
@@ -108,20 +110,32 @@ const Board = (() => {
   
   function handlePanMove(e) {
     if (!isPanning) return;
+    pendingPanPoint = { x: e.clientX, y: e.clientY };
+    if (panRafId) return;
+    panRafId = requestAnimationFrame(applyPanMove);
+  }
+  
+  function applyPanMove() {
+    if (!pendingPanPoint) {
+      panRafId = null;
+      return;
+    }
     
-    const now = Date.now();
-    if (now - lastPanTime < THROTTLE_MS) return;
-    lastPanTime = now;
-    
-    panOffset.x = e.clientX - panStart.x;
-    panOffset.y = e.clientY - panStart.y;
+    panOffset.x = pendingPanPoint.x - panStart.x;
+    panOffset.y = pendingPanPoint.y - panStart.y;
     
     clampPanOffset();
     updateBoardPosition();
+    panRafId = null;
   }
   
   function handlePanEnd() {
     isPanning = false;
+    pendingPanPoint = null;
+    if (panRafId) {
+      cancelAnimationFrame(panRafId);
+      panRafId = null;
+    }
     viewport.classList.remove('dragging');
   }
   
@@ -141,20 +155,19 @@ const Board = (() => {
     if (!isPanning || e.touches.length !== 1) return;
     
     e.preventDefault();
-    const now = Date.now();
-    if (now - lastPanTime < THROTTLE_MS) return;
-    lastPanTime = now;
-    
     const touch = e.touches[0];
-    panOffset.x = touch.clientX - panStart.x;
-    panOffset.y = touch.clientY - panStart.y;
-    
-    clampPanOffset();
-    updateBoardPosition();
+    pendingPanPoint = { x: touch.clientX, y: touch.clientY };
+    if (panRafId) return;
+    panRafId = requestAnimationFrame(applyPanMove);
   }
   
   function handleTouchPanEnd() {
     isPanning = false;
+    pendingPanPoint = null;
+    if (panRafId) {
+      cancelAnimationFrame(panRafId);
+      panRafId = null;
+    }
   }
   
   /**
@@ -224,24 +237,28 @@ const Board = (() => {
   
   function handleNoteDrag(e) {
     if (!isDragging || !draggedNote) return;
-    
-    const now = Date.now();
-    if (now - lastDragTime < THROTTLE_MS) return;
-    lastDragTime = now;
-    
-    moveNoteTo(e.clientX, e.clientY);
+    pendingDragPoint = { x: e.clientX, y: e.clientY };
+    if (dragRafId) return;
+    dragRafId = requestAnimationFrame(applyDragMove);
   }
   
   function handleNoteTouchMove(e) {
     if (!isDragging || !draggedNote || e.touches.length !== 1) return;
     e.preventDefault();
     
-    const now = Date.now();
-    if (now - lastDragTime < THROTTLE_MS) return;
-    lastDragTime = now;
-    
     const touch = e.touches[0];
-    moveNoteTo(touch.clientX, touch.clientY);
+    pendingDragPoint = { x: touch.clientX, y: touch.clientY };
+    if (dragRafId) return;
+    dragRafId = requestAnimationFrame(applyDragMove);
+  }
+  
+  function applyDragMove() {
+    if (!pendingDragPoint || !draggedNote) {
+      dragRafId = null;
+      return;
+    }
+    moveNoteTo(pendingDragPoint.x, pendingDragPoint.y);
+    dragRafId = null;
   }
   
   function moveNoteTo(clientX, clientY) {
@@ -274,6 +291,15 @@ const Board = (() => {
   
   function finishNoteDrag() {
     if (!isDragging || !draggedNote) return;
+    
+    if (pendingDragPoint) {
+      moveNoteTo(pendingDragPoint.x, pendingDragPoint.y);
+      pendingDragPoint = null;
+    }
+    if (dragRafId) {
+      cancelAnimationFrame(dragRafId);
+      dragRafId = null;
+    }
     
     const noteId = draggedNote.dataset.noteId;
     const x = parseFloat(draggedNote.style.left);
@@ -323,14 +349,27 @@ const Board = (() => {
   
   function handleRotationMove(e) {
     if (!isRotating || !rotatingNote) return;
-    rotateNoteTo(e.clientX, e.clientY);
+    pendingRotationPoint = { x: e.clientX, y: e.clientY };
+    if (rotationRafId) return;
+    rotationRafId = requestAnimationFrame(applyRotationMove);
   }
   
   function handleRotationTouchMove(e) {
     if (!isRotating || !rotatingNote || e.touches.length !== 1) return;
     e.preventDefault();
     const touch = e.touches[0];
-    rotateNoteTo(touch.clientX, touch.clientY);
+    pendingRotationPoint = { x: touch.clientX, y: touch.clientY };
+    if (rotationRafId) return;
+    rotationRafId = requestAnimationFrame(applyRotationMove);
+  }
+  
+  function applyRotationMove() {
+    if (!pendingRotationPoint || !rotatingNote) {
+      rotationRafId = null;
+      return;
+    }
+    rotateNoteTo(pendingRotationPoint.x, pendingRotationPoint.y);
+    rotationRafId = null;
   }
   
   function rotateNoteTo(clientX, clientY) {
@@ -354,6 +393,15 @@ const Board = (() => {
   
   function handleRotationEnd() {
     if (!isRotating || !rotatingNote) return;
+    
+    if (pendingRotationPoint) {
+      rotateNoteTo(pendingRotationPoint.x, pendingRotationPoint.y);
+      pendingRotationPoint = null;
+    }
+    if (rotationRafId) {
+      cancelAnimationFrame(rotationRafId);
+      rotationRafId = null;
+    }
     
     const noteId = rotatingNote.dataset.noteId;
     const transform = rotatingNote.style.transform;
