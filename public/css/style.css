@@ -168,13 +168,13 @@ html, body {
 }
 
 .btn-primary {
-  background: var(--cork-bg);
+  background: #00af6b;
   color: white;
   width: 100%;
 }
 
 .btn-primary:hover {
-  background: var(--cork-dark);
+  background: #1f7a47;
 }
 
 .btn-secondary {
