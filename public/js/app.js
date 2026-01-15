@@ -178,6 +178,7 @@ const App = (() => {
     // Text modal
     document.getElementById('cancel-text-btn').addEventListener('click', closeTextModal);
     document.getElementById('save-text-btn').addEventListener('click', saveTextNote);
+    document.getElementById('delete-text-btn').addEventListener('click', deleteCurrentNoteFromModal);
     
     // Image modal
     const imageDropZone = document.getElementById('image-drop-zone');
@@ -210,11 +211,13 @@ const App = (() => {
     
     document.getElementById('cancel-image-btn').addEventListener('click', closeImageModal);
     document.getElementById('save-image-btn').addEventListener('click', saveImageNote);
+    document.getElementById('delete-image-btn').addEventListener('click', deleteCurrentNoteFromModal);
     
     // Doodle modal
     document.getElementById('doodle-clear').addEventListener('click', () => DoodleEditor.clear());
     document.getElementById('cancel-doodle-btn').addEventListener('click', closeDoodleModal);
     document.getElementById('save-doodle-btn').addEventListener('click', saveDoodleNote);
+    document.getElementById('delete-doodle-btn').addEventListener('click', deleteCurrentNoteFromModal);
 
     doodleBrushButtons.forEach(btn => {
       btn.addEventListener('click', () => {
@@ -446,6 +449,32 @@ const App = (() => {
       Board.removeNote(draftId);
     }
   }
+
+  async function deleteCurrentNoteFromModal() {
+    const noteId = currentEditNoteId || pendingDraftNoteId;
+    if (!noteId) {
+      closeAllModals();
+      return;
+    }
+
+    if (!confirm('Delete this note?')) {
+      return;
+    }
+
+    try {
+      markLocalChange();
+      await Notes.deleteNote(noteId);
+    } catch (err) {
+      console.error('Failed to delete note:', err);
+    } finally {
+      Board.removeNote(noteId);
+      if (pendingDraftNoteId === noteId) {
+        pendingDraftNoteId = null;
+      }
+      currentEditNoteId = null;
+      closeAllModals();
+    }
+  }
   
   /**
    * Run a note update with refresh protection
@@ -545,8 +574,14 @@ const App = (() => {
     } else if (type === 'edit') {
       // Open edit modal based on note type
       const note = Notes.getNote(noteId);
-      if (note && note.payload.type === 'text') {
+      if (!note) return;
+
+      if (note.payload.type === 'text') {
         openTextModal(note);
+      } else if (note.payload.type === 'image') {
+        openImageModal(note);
+      } else if (note.payload.type === 'doodle') {
+        openDoodleModal(note);
       }
     }
   }
@@ -582,6 +617,10 @@ const App = (() => {
       case 'edit':
         if (note.payload.type === 'text') {
           openTextModal(note);
+        } else if (note.payload.type === 'image') {
+          openImageModal(note);
+        } else if (note.payload.type === 'doodle') {
+          openDoodleModal(note);
         }
         break;
         
@@ -792,6 +831,9 @@ const App = (() => {
     if (existingNote) {
       currentEditNoteId = existingNote.id;
       selectColor(existingNote.payload.color);
+      if (existingNote.payload.doodle) {
+        DoodleEditor.setData(existingNote.payload.doodle);
+      }
     } else {
       currentEditNoteId = null;
       selectColor(Notes.randomColor());
