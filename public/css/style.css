@@ -745,6 +745,53 @@ body.room-bg-active #room-bg {
 }
 
 /* ========================================
+   Toasts
+   ======================================== */
+.toast-container {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 5200;
+  pointer-events: none;
+}
+
+.toast {
+  min-width: 220px;
+  max-width: min(360px, 90vw);
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  border: 2px solid var(--ink);
+  background: #fffdf5;
+  color: var(--ink);
+  box-shadow: var(--shadow-hard);
+  font-size: 0.9rem;
+  line-height: 1.4;
+  text-align: center;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.toast.toast-error {
+  background: #fff1f1;
+}
+
+.toast.toast-info {
+  background: #f5f1ff;
+}
+
+/* ========================================
    Loading Overlay
    ======================================== */
 .loading-overlay {

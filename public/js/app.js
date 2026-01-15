@@ -8,7 +8,7 @@ const App = (() => {
   let loginScreen, boardScreen;
   let passphraseInput, passphraseForm, openBoardBtn, rememberRoomCheckbox;
   let textModal, imageModal, doodleModal, deleteModal;
-  let loadingOverlay, loadingText;
+  let loadingOverlay, loadingText, toastContainer;
   let doodleBrushButtons, doodleEraserBtn;
   let addFabContainer, addFabButton, addFabMenu;
   let confirmDeleteBtn, cancelDeleteBtn;
@@ -38,6 +38,8 @@ const App = (() => {
   const DEFAULT_ROOM = 'public';
   const REMEMBER_ROOM_KEY = 'mynotes.rememberRoom';
   const LAST_ROOM_KEY = 'mynotes.lastRoom';
+  const TOAST_DURATION_MS = 2800;
+  const TOAST_ANIMATION_MS = 200;
   
   /**
    * Initialize the application
@@ -56,6 +58,7 @@ const App = (() => {
     deleteModal = document.getElementById('delete-modal');
     loadingOverlay = document.getElementById('loading-overlay');
     loadingText = document.getElementById('loading-text');
+    toastContainer = document.getElementById('toast-container');
     doodleBrushButtons = document.querySelectorAll('.doodle-tool-btn');
     doodleEraserBtn = document.getElementById('doodle-eraser');
     addFabContainer = document.getElementById('add-fab-container');
@@ -327,7 +330,7 @@ const App = (() => {
     } catch (err) {
       console.error('Failed to open board:', err);
       hideLoading();
-      alert('Failed to open board. Please try again.');
+      showToast('Failed to open board. Please try again.');
     }
   }
   
@@ -430,7 +433,7 @@ const App = (() => {
       return note;
     } catch (err) {
       console.error('Failed to create draft note:', err);
-      alert('Failed to create note');
+      showToast('Failed to create note');
       return null;
     }
   }
@@ -483,8 +486,10 @@ const App = (() => {
     try {
       markLocalChange();
       await Notes.deleteNote(noteId);
+      showToast('Note deleted', { variant: 'info' });
     } catch (err) {
       console.error('Failed to delete note:', err);
+      showToast('Failed to delete note');
     } finally {
       Board.removeNote(noteId);
       if (pendingDraftNoteId === noteId) {
@@ -568,6 +573,7 @@ const App = (() => {
       { x, y, rot: getRotationForNote(noteId) },
       (err) => {
         console.error('Failed to save note position:', err);
+        showToast('Failed to save note position');
       }
     );
   }
@@ -581,6 +587,7 @@ const App = (() => {
       { rot: rotation },
       (err) => {
         console.error('Failed to save note rotation:', err);
+        showToast('Failed to save note rotation');
       }
     );
   }
@@ -649,7 +656,7 @@ const App = (() => {
   async function saveTextNote() {
     const text = document.getElementById('note-text').value.trim();
     if (!text) {
-      alert('Please enter some text');
+      showToast('Please enter some text', { variant: 'info' });
       return;
     }
 
@@ -685,7 +692,7 @@ const App = (() => {
       closeTextModal();
     } catch (err) {
       console.error('Failed to save note:', err);
-      alert('Failed to save note');
+      showToast('Failed to save note');
     }
   }
   
@@ -749,7 +756,7 @@ const App = (() => {
     } catch (err) {
       console.error('Failed to process image:', err);
       hideLoading();
-      alert('Failed to process image');
+      showToast('Failed to process image');
     }
   }
   
@@ -787,7 +794,7 @@ const App = (() => {
       closeImageModal();
     } catch (err) {
       console.error('Failed to save image note:', err);
-      alert('Failed to save image note');
+      showToast('Failed to save image note');
     }
   }
   
@@ -830,7 +837,7 @@ const App = (() => {
    */
   async function saveDoodleNote() {
     if (DoodleEditor.isEmpty()) {
-      alert('Please draw something first');
+      showToast('Please draw something first', { variant: 'info' });
       return;
     }
 
@@ -863,7 +870,7 @@ const App = (() => {
       closeDoodleModal();
     } catch (err) {
       console.error('Failed to save doodle note:', err);
-      alert('Failed to save doodle note');
+      showToast('Failed to save doodle note');
     }
   }
   
@@ -993,6 +1000,26 @@ const App = (() => {
     document.body.classList.remove('room-bg-active');
   }
   
+  function showToast(message, options = {}) {
+    if (!toastContainer) return;
+    const { variant = 'error', duration = TOAST_DURATION_MS } = options;
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${variant}`;
+    toast.textContent = message;
+    toastContainer.appendChild(toast);
+
+    requestAnimationFrame(() => {
+      toast.classList.add('show');
+    });
+
+    const removeToast = () => {
+      toast.classList.remove('show');
+      setTimeout(() => toast.remove(), TOAST_ANIMATION_MS);
+    };
+
+    setTimeout(removeToast, duration);
+  }
+
   /**
    * Show loading overlay
    */
