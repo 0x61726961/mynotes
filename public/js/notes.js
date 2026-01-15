@@ -41,6 +41,23 @@ const Notes = (() => {
   function randomVariant() {
     return COLOR_VARIANTS[Math.floor(Math.random() * COLOR_VARIANTS.length)];
   }
+
+  function variantFromId(noteId) {
+    let hash = 0;
+    const id = String(noteId || '');
+    for (let i = 0; i < id.length; i += 1) {
+      hash = (hash * 31 + id.charCodeAt(i)) | 0;
+    }
+    const index = Math.abs(hash) % COLOR_VARIANTS.length;
+    return COLOR_VARIANTS[index];
+  }
+
+  function getVariant(noteId, payload) {
+    if (payload?.variant && COLOR_VARIANTS.includes(payload.variant)) {
+      return payload.variant;
+    }
+    return variantFromId(noteId);
+  }
   
   /**
    * Get a random base note color
@@ -127,7 +144,7 @@ const Notes = (() => {
           payload,
           createdAt,
           updatedAt,
-          variant: randomVariant() // Assign random variant for this session
+          variant: getVariant(note.id, payload)
         };
         notesCache.set(note.id, decryptedNote);
         decrypted.push(decryptedNote);
@@ -171,7 +188,7 @@ const Notes = (() => {
       payload,
       createdAt: payload.created_at,
       updatedAt: payload.created_at,
-      variant: randomVariant()
+      variant: getVariant(id, payload)
     };
     notesCache.set(id, note);
     

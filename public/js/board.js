@@ -3,7 +3,7 @@
  */
 
 const Board = (() => {
-  const DRAG_Z_INDEX = 2147483647;
+  const DRAG_Z_INDEX = Number.MAX_SAFE_INTEGER;
   let viewport = null;
   let corkboard = null;
   let panOffset = { x: 0, y: 0 };
