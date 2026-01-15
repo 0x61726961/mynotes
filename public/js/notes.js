@@ -240,6 +240,7 @@ const Notes = (() => {
     const el = document.createElement('div');
     el.className = `sticky-note ${color} ${variant}`;
     el.dataset.noteId = id;
+    el.dataset.rot = rot;
     el.style.left = `${x}px`;
     el.style.top = `${y}px`;
     el.style.transform = `rotate(${rot}deg)`;
@@ -278,6 +279,7 @@ const Notes = (() => {
    * @param {number} rot
    */
   function updateNotePosition(el, x, y, rot) {
+    el.dataset.rot = rot;
     el.style.left = `${x}px`;
     el.style.top = `${y}px`;
     el.style.transform = `rotate(${rot}deg)`;

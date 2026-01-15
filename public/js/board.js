@@ -271,8 +271,7 @@ const Board = (() => {
     const clamped = Notes.clampPosition(x, y);
     
     // Get current rotation
-    const note = Notes.getNote(draggedNote.dataset.noteId);
-    const rot = note ? note.payload.rot : 0;
+    const rot = getNoteRotation(draggedNote);
     
     Notes.updateNotePosition(draggedNote, clamped.x, clamped.y, rot);
   }
@@ -390,6 +389,17 @@ const Board = (() => {
     
     Notes.updateNotePosition(rotatingNote, x, y, newRotation);
   }
+
+  function getNoteRotation(noteEl) {
+    if (noteEl?.dataset?.rot !== undefined) {
+      const parsed = parseFloat(noteEl.dataset.rot);
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+
+    const transform = noteEl?.style?.transform || '';
+    const match = transform.match(/rotate\(([-\d.]+)deg\)/);
+    return match ? parseFloat(match[1]) : 0;
+  }
   
   function handleRotationEnd() {
     if (!isRotating || !rotatingNote) return;
@@ -404,9 +414,7 @@ const Board = (() => {
     }
     
     const noteId = rotatingNote.dataset.noteId;
-    const transform = rotatingNote.style.transform;
-    const match = transform.match(/rotate\(([-\d.]+)deg\)/);
-    const rotation = match ? parseFloat(match[1]) : 0;
+    const rotation = getNoteRotation(rotatingNote);
     
     onNoteRotate(noteId, rotation);
     
