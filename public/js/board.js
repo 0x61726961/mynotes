@@ -411,9 +411,9 @@ const Board = (() => {
   function bringNoteToFront(noteEl) {
     if (!noteEl) return;
     const noteId = noteEl.dataset.noteId;
-    const updatedAt = Notes.touchNote(noteId);
-    if (updatedAt) {
-      noteEl.style.zIndex = updatedAt;
+    const stackIndex = Notes.touchNote(noteId);
+    if (stackIndex) {
+      noteEl.style.zIndex = stackIndex;
     }
   }
 

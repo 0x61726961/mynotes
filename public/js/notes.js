@@ -14,6 +14,7 @@ const Notes = (() => {
   let notesCache = new Map();
   let encryptionKey = null;
   let boardId = null;
+  let stackCounter = 0;
   
   /**
    * Initialize notes module with crypto keys
@@ -24,6 +25,7 @@ const Notes = (() => {
     boardId = bid;
     encryptionKey = key;
     notesCache.clear();
+    stackCounter = 0;
   }
   
   /**
@@ -65,6 +67,22 @@ const Notes = (() => {
    */
   function randomColor() {
     return COLORS[Math.floor(Math.random() * COLORS.length)];
+  }
+
+  function compareNotesForStacking(a, b) {
+    const aTime = a.updatedAt ?? a.createdAt ?? a.payload?.created_at ?? 0;
+    const bTime = b.updatedAt ?? b.createdAt ?? b.payload?.created_at ?? 0;
+    if (aTime !== bTime) return aTime - bTime;
+    return (a.id || '').localeCompare(b.id || '');
+  }
+
+  function applyStackOrder(notes) {
+    const ordered = [...notes].sort(compareNotesForStacking);
+    ordered.forEach((note, index) => {
+      note.stackIndex = index + 1;
+      stackCounter = Math.max(stackCounter, note.stackIndex);
+    });
+    return ordered;
   }
   
   /**
@@ -122,6 +140,7 @@ const Notes = (() => {
     
     if (resetCache) {
       notesCache.clear();
+      stackCounter = 0;
     }
     
     // Decrypt all notes
@@ -154,7 +173,7 @@ const Notes = (() => {
       }
     }
     
-    return decrypted;
+    return applyStackOrder(decrypted);
   }
   
   /**
@@ -188,8 +207,10 @@ const Notes = (() => {
       payload,
       createdAt: payload.created_at,
       updatedAt: payload.created_at,
+      stackIndex: stackCounter + 1,
       variant: getVariant(id, payload)
     };
+    stackCounter = note.stackIndex;
     notesCache.set(id, note);
     
     return note;
@@ -272,13 +293,15 @@ const Notes = (() => {
   /**
    * Mark a note as recently touched for stacking order
    * @param {string} id
-   * @returns {number|null} Updated timestamp
+   * @returns {number|null} Stack index
    */
   function touchNote(id) {
     const note = notesCache.get(id);
     if (!note) return null;
     note.updatedAt = Date.now();
-    return note.updatedAt;
+    stackCounter += 1;
+    note.stackIndex = stackCounter;
+    return note.stackIndex;
   }
   
   /**
@@ -296,7 +319,7 @@ const Notes = (() => {
     el.dataset.rot = rot;
     el.style.left = `${x}px`;
     el.style.top = `${y}px`;
-    el.style.zIndex = note.updatedAt ?? note.createdAt ?? payload.created_at ?? 0;
+    el.style.zIndex = note.stackIndex ?? 0;
     el.style.setProperty('--note-rot', `${rot}deg`);
     
     // Content area

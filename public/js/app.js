@@ -298,6 +298,9 @@ const App = (() => {
 
   function sortNotesForStacking(notes) {
     return [...notes].sort((a, b) => {
+      const aStack = a.stackIndex ?? 0;
+      const bStack = b.stackIndex ?? 0;
+      if (aStack !== bStack) return aStack - bStack;
       const aTime = a.updatedAt ?? a.createdAt ?? a.payload?.created_at ?? 0;
       const bTime = b.updatedAt ?? b.createdAt ?? b.payload?.created_at ?? 0;
       if (aTime !== bTime) return aTime - bTime;
