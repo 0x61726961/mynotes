@@ -388,6 +388,7 @@ const Board = (() => {
     const y = parseFloat(rotatingNote.style.top);
     
     Notes.updateNotePosition(rotatingNote, x, y, newRotation);
+    Notes.setNoteRotation(rotatingNote.dataset.noteId, newRotation);
   }
 
   function getNoteRotation(noteEl) {

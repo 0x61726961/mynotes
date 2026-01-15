@@ -227,6 +227,17 @@ const Notes = (() => {
   function getNote(id) {
     return notesCache.get(id) || null;
   }
+
+  /**
+   * Update cached rotation for a note
+   * @param {string} id
+   * @param {number} rot
+   */
+  function setNoteRotation(id, rot) {
+    const note = notesCache.get(id);
+    if (!note) return;
+    note.payload.rot = rot;
+  }
   
   /**
    * Render a note DOM element
@@ -309,6 +320,7 @@ const Notes = (() => {
     updateNote,
     deleteNote,
     getNote,
+    setNoteRotation,
     renderNote,
     updateNotePosition,
     clampPosition,
