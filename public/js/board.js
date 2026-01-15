@@ -225,13 +225,6 @@ const Board = (() => {
   function setupNoteInteractions(noteEl) {
     setupNoteDragging(noteEl);
 
-    // Context menu on right-click
-    noteEl.addEventListener('contextmenu', (e) => {
-      e.preventDefault();
-      bringNoteToFront(noteEl);
-      onNoteClick(noteEl.dataset.noteId, e.clientX, e.clientY, 'context');
-    });
-
     // Double-click to edit
     noteEl.addEventListener('dblclick', (e) => {
       bringNoteToFront(noteEl);

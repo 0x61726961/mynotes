@@ -8,7 +8,6 @@ const App = (() => {
   let loginScreen, boardScreen;
   let passphraseInput, passphraseForm, openBoardBtn, rememberRoomCheckbox;
   let textModal, imageModal, doodleModal;
-  let contextMenu;
   let loadingOverlay, loadingText;
   let doodleBrushButtons, doodleEraserBtn;
   let addFabContainer, addFabButton, addFabMenu;
@@ -49,7 +48,6 @@ const App = (() => {
     textModal = document.getElementById('text-modal');
     imageModal = document.getElementById('image-modal');
     doodleModal = document.getElementById('doodle-modal');
-    contextMenu = document.getElementById('note-context-menu');
     loadingOverlay = document.getElementById('loading-overlay');
     loadingText = document.getElementById('loading-text');
     doodleBrushButtons = document.querySelectorAll('.doodle-tool-btn');
@@ -65,7 +63,6 @@ const App = (() => {
     setupFabEvents();
     setupToolbarEvents();
     setupModalEvents();
-    setupContextMenu();
     
     // Initialize doodle editor
     DoodleEditor.init(document.getElementById('doodle-canvas'));
@@ -254,28 +251,6 @@ const App = (() => {
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         closeAllModals();
-        closeContextMenu();
-      }
-    });
-  }
-  
-  /**
-   * Setup context menu
-   */
-  function setupContextMenu() {
-    contextMenu.querySelectorAll('.context-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const action = btn.dataset.action;
-        handleContextAction(action);
-        closeContextMenu({ resetSelection: action !== 'edit' });
-      });
-    });
-    
-    // Close on any click outside
-    document.addEventListener('click', (e) => {
-      if (!contextMenu.classList.contains('active')) return;
-      if (!contextMenu.contains(e.target)) {
-        closeContextMenu();
       }
     });
   }
@@ -565,87 +540,22 @@ const App = (() => {
   }
   
   /**
-   * Handle note click (context menu or edit)
+   * Handle note click (edit only)
    */
   function handleNoteClick(noteId, clientX, clientY, type) {
-    currentEditNoteId = noteId;
-    
-    if (type === 'context') {
-      showContextMenu(clientX, clientY);
-    } else if (type === 'edit') {
-      // Open edit modal based on note type
-      const note = Notes.getNote(noteId);
-      if (!note) return;
+    if (type !== 'edit') return;
 
-      if (note.payload.type === 'text') {
-        openTextModal(note);
-      } else if (note.payload.type === 'image') {
-        openImageModal(note);
-      } else if (note.payload.type === 'doodle') {
-        openDoodleModal(note);
-      }
-    }
-  }
-  
-  /**
-   * Show context menu
-   */
-  function showContextMenu(x, y) {
-    contextMenu.style.left = `${x}px`;
-    contextMenu.style.top = `${y}px`;
-    contextMenu.classList.add('active');
-  }
-  
-  /**
-   * Close context menu
-   */
-  function closeContextMenu(options = {}) {
-    const { resetSelection = true } = options;
-    contextMenu.classList.remove('active');
-    if (resetSelection) {
-      currentEditNoteId = null;
-    }
-  }
-  
-  /**
-   * Handle context menu action
-   */
-  async function handleContextAction(action) {
-    const noteId = currentEditNoteId;
-    if (!noteId) return;
-    
+    currentEditNoteId = noteId;
+
     const note = Notes.getNote(noteId);
     if (!note) return;
-    
-    switch (action) {
-      case 'edit':
-        if (note.payload.type === 'text') {
-          openTextModal(note);
-        } else if (note.payload.type === 'image') {
-          openImageModal(note);
-        } else if (note.payload.type === 'doodle') {
-          openDoodleModal(note);
-        }
-        break;
-        
-      case 'rotate':
-        // Rotate by 5 degrees
-        const newRot = (note.payload.rot + 5) % 360;
-        const el = Board.getNoteElement(noteId);
-        if (el) {
-          Notes.updateNotePosition(el, note.payload.x, note.payload.y, newRot);
-          markLocalChange();
-          await runNoteUpdate(noteId, { rot: newRot });
-        }
-        break;
-        
-      case 'delete':
-        if (confirm('Delete this note?')) {
-          markLocalChange();
-          await Notes.deleteNote(noteId);
-          Board.removeNote(noteId);
-        }
-        break;
+
+    if (note.payload.type === 'text') {
+      openTextModal(note);
+    } else if (note.payload.type === 'image') {
+      openImageModal(note);
+    } else if (note.payload.type === 'doodle') {
+      openDoodleModal(note);
     }
   }
   
