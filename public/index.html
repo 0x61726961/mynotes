@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#8b7355">
+  <title>MyNotes - Private Sticky Board</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Screen 1: Passphrase Entry -->
+  <div id="login-screen" class="screen active">
+    <div class="login-container">
+      <h1 class="app-title">📌 MyNotes</h1>
+      <p class="app-subtitle">End-to-end encrypted sticky boards</p>
+      
+      <form id="passphrase-form">
+        <div class="input-group">
+          <label for="passphrase">Enter your board passphrase</label>
+          <input 
+            type="password" 
+            id="passphrase" 
+            name="passphrase" 
+            placeholder="Your secret passphrase..."
+            autocomplete="off"
+            required
+          >
+          <button type="button" id="toggle-password" class="toggle-password" aria-label="Show password">
+            👁️
+          </button>
+        </div>
+        <button type="submit" id="open-board-btn" class="btn btn-primary">
+          Open Board
+        </button>
+      </form>
+      
+      <p class="hint">
+        Share this passphrase with others to collaborate.<br>
+        Your notes are encrypted locally — we never see them.
+      </p>
+    </div>
+  </div>
+
+  <!-- Screen 2: Corkboard -->
+  <div id="board-screen" class="screen">
+    <!-- Toolbar -->
+    <div id="toolbar">
+      <button id="add-text-btn" class="toolbar-btn" title="Add text note">
+        📝
+      </button>
+      <button id="add-image-btn" class="toolbar-btn" title="Add image note">
+        🖼️
+      </button>
+      <button id="add-doodle-btn" class="toolbar-btn" title="Add doodle">
+        ✏️
+      </button>
+      <div class="toolbar-spacer"></div>
+      <button id="logout-btn" class="toolbar-btn" title="Lock board">
+        🔒
+      </button>
+    </div>
+
+    <!-- Board viewport -->
+    <div id="board-viewport">
+      <div id="corkboard">
+        <!-- Notes will be rendered here -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Text Note Editor Modal -->
+  <div id="text-modal" class="modal">
+    <div class="modal-content note-editor">
+      <h3>Add Note</h3>
+      <textarea id="note-text" placeholder="Write your note..."></textarea>
+      <div class="color-picker">
+        <label>Color:</label>
+        <div class="color-options">
+          <button type="button" class="color-btn" data-color="yellow" style="background: #fff740;"></button>
+          <button type="button" class="color-btn" data-color="pink" style="background: #ff7eb9;"></button>
+          <button type="button" class="color-btn" data-color="blue" style="background: #7afcff;"></button>
+          <button type="button" class="color-btn" data-color="green" style="background: #98fb98;"></button>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button id="cancel-text-btn" class="btn btn-secondary">Cancel</button>
+        <button id="save-text-btn" class="btn btn-primary">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Image Upload Modal -->
+  <div id="image-modal" class="modal">
+    <div class="modal-content note-editor">
+      <h3>Add Image</h3>
+      <div id="image-drop-zone" class="drop-zone">
+        <p>Drop image here or click to select</p>
+        <input type="file" id="image-input" accept="image/*" hidden>
+      </div>
+      <canvas id="image-preview" class="image-preview" width="256" height="256"></canvas>
+      <div class="color-picker">
+        <label>Note Color:</label>
+        <div class="color-options">
+          <button type="button" class="color-btn" data-color="yellow" style="background: #fff740;"></button>
+          <button type="button" class="color-btn" data-color="pink" style="background: #ff7eb9;"></button>
+          <button type="button" class="color-btn" data-color="blue" style="background: #7afcff;"></button>
+          <button type="button" class="color-btn" data-color="green" style="background: #98fb98;"></button>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button id="cancel-image-btn" class="btn btn-secondary">Cancel</button>
+        <button id="save-image-btn" class="btn btn-primary" disabled>Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Doodle Editor Modal -->
+  <div id="doodle-modal" class="modal">
+    <div class="modal-content note-editor">
+      <h3>Draw Doodle</h3>
+      <canvas id="doodle-canvas" class="doodle-canvas" width="256" height="256"></canvas>
+      <div class="doodle-tools">
+        <button id="doodle-clear" class="btn btn-small">Clear</button>
+      </div>
+      <div class="color-picker">
+        <label>Note Color:</label>
+        <div class="color-options">
+          <button type="button" class="color-btn" data-color="yellow" style="background: #fff740;"></button>
+          <button type="button" class="color-btn" data-color="pink" style="background: #ff7eb9;"></button>
+          <button type="button" class="color-btn" data-color="blue" style="background: #7afcff;"></button>
+          <button type="button" class="color-btn" data-color="green" style="background: #98fb98;"></button>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button id="cancel-doodle-btn" class="btn btn-secondary">Cancel</button>
+        <button id="save-doodle-btn" class="btn btn-primary">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Note Context Menu (for editing/deleting) -->
+  <div id="note-context-menu" class="context-menu">
+    <button class="context-btn" data-action="edit">Edit</button>
+    <button class="context-btn" data-action="rotate">Rotate</button>
+    <button class="context-btn" data-action="delete">Delete</button>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div id="loading-overlay" class="loading-overlay">
+    <div class="spinner"></div>
+    <p id="loading-text">Deriving encryption key...</p>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/crypto.js"></script>
+  <script src="js/image.js"></script>
+  <script src="js/doodle.js"></script>
+  <script src="js/notes.js"></script>
+  <script src="js/board.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
