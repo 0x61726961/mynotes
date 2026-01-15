@@ -10,6 +10,7 @@ const App = (() => {
   let textModal, imageModal, doodleModal;
   let contextMenu;
   let loadingOverlay, loadingText;
+  let doodleBrushButtons, doodleEraserBtn;
   
   // State
   let currentBoardId = null;
@@ -46,6 +47,8 @@ const App = (() => {
     contextMenu = document.getElementById('note-context-menu');
     loadingOverlay = document.getElementById('loading-overlay');
     loadingText = document.getElementById('loading-text');
+    doodleBrushButtons = document.querySelectorAll('.doodle-tool-btn');
+    doodleEraserBtn = document.getElementById('doodle-eraser');
     
     // Setup event listeners
     setupLoginEvents();
@@ -147,6 +150,21 @@ const App = (() => {
     document.getElementById('doodle-clear').addEventListener('click', () => DoodleEditor.clear());
     document.getElementById('cancel-doodle-btn').addEventListener('click', closeDoodleModal);
     document.getElementById('save-doodle-btn').addEventListener('click', saveDoodleNote);
+
+    doodleBrushButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const size = Number.parseInt(btn.dataset.brush, 10);
+        if (!Number.isNaN(size)) {
+          DoodleEditor.setBrushSize(size);
+          updateDoodleToolUI();
+        }
+      });
+    });
+
+    doodleEraserBtn.addEventListener('click', () => {
+      DoodleEditor.setEraser(!DoodleEditor.isEraserEnabled());
+      updateDoodleToolUI();
+    });
     
     // Color pickers
     document.querySelectorAll('.color-btn').forEach(btn => {
@@ -603,6 +621,8 @@ const App = (() => {
    */
   function openDoodleModal() {
     DoodleEditor.clear();
+    DoodleEditor.resetTools();
+    updateDoodleToolUI();
     selectColor(Notes.randomColor());
     doodleModal.classList.add('active');
   }
@@ -648,6 +668,19 @@ const App = (() => {
   /**
    * Select color in current modal
    */
+  function updateDoodleToolUI() {
+    const currentSize = DoodleEditor.getBrushSize();
+    const erasing = DoodleEditor.isEraserEnabled();
+
+    doodleBrushButtons.forEach(btn => {
+      const size = Number.parseInt(btn.dataset.brush, 10);
+      const isActive = !erasing && size === currentSize;
+      btn.classList.toggle('active', isActive);
+    });
+
+    doodleEraserBtn.classList.toggle('active', erasing);
+  }
+
   function selectColor(color) {
     selectedColor = color;
     document.querySelectorAll('.color-btn').forEach(btn => {

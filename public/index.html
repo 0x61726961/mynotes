@@ -120,7 +120,15 @@
       <h3>Draw Doodle</h3>
       <canvas id="doodle-canvas" class="doodle-canvas" width="256" height="256"></canvas>
       <div class="doodle-tools">
-        <button id="doodle-clear" class="btn btn-small">Clear</button>
+        <div class="doodle-tool-group">
+          <button type="button" class="btn btn-small doodle-tool-btn" data-brush="1" aria-label="Pencil">•</button>
+          <button type="button" class="btn btn-small doodle-tool-btn" data-brush="2" aria-label="Pen">◆</button>
+          <button type="button" class="btn btn-small doodle-tool-btn" data-brush="3" aria-label="Marker">■</button>
+        </div>
+        <div class="doodle-tool-group">
+          <button type="button" id="doodle-eraser" class="btn btn-small">Eraser</button>
+          <button type="button" id="doodle-clear" class="btn btn-small">Clear</button>
+        </div>
       </div>
       <div class="color-picker">
         <label>Note Color:</label>

@@ -1,10 +1,13 @@
 /**
  * Image processing module
- * Handles resizing, 1-bit dithering, and bit-packing for E2E-safe image storage
+ * Handles resizing and 8-bit grayscale storage for E2E-safe image storage
  */
 
 const ImageProcessor = (() => {
   const MAX_SIZE = 256;
+  const IMAGE_LEVELS = 4;
+  const GRAPHITE_COLOR = { r: 34, g: 32, b: 28 };
+  const GRAPHITE_CSS = `rgb(${GRAPHITE_COLOR.r}, ${GRAPHITE_COLOR.g}, ${GRAPHITE_COLOR.b})`;
   
   /**
    * Load an image from file or URL
@@ -172,10 +175,34 @@ const ImageProcessor = (() => {
     return bits;
   }
   
+  function quantizeGrayscale(gray, width, height, levels) {
+    const output = new Uint8Array(gray.length);
+    const maxIndex = levels - 1;
+    const bayer = [
+      [0, 8, 2, 10],
+      [12, 4, 14, 6],
+      [3, 11, 1, 9],
+      [15, 7, 13, 5]
+    ];
+
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const idx = y * width + x;
+        const threshold = (bayer[y % 4][x % 4] + 0.5) / 16 - 0.5;
+        const normalized = gray[idx] / 255;
+        const nudged = Math.min(1, Math.max(0, normalized + threshold / levels));
+        const quantized = Math.round(nudged * maxIndex) / maxIndex;
+        output[idx] = Math.round(quantized * 255);
+      }
+    }
+
+    return output;
+  }
+
   /**
-   * Process an image file: resize, dither, and pack
+   * Process an image file: resize and store 8-bit grayscale data
    * @param {File} file - Image file
-   * @returns {Promise<{w: number, h: number, data: string}>} Width, height, base64 packed data
+   * @returns {Promise<{w: number, h: number, data: string}>} Width, height, base64 grayscale data
    */
   async function processImage(file) {
     const img = await loadImage(file);
@@ -184,18 +211,17 @@ const ImageProcessor = (() => {
     const imageData = ctx.getImageData(0, 0, width, height);
     
     const gray = toGrayscale(imageData);
-    const dithered = floydSteinbergDither(gray, width, height);
-    const packed = packBits(dithered);
+    const quantized = quantizeGrayscale(gray, width, height, IMAGE_LEVELS);
     
     return {
       w: width,
       h: height,
-      data: Crypto.bufferToBase64(packed.buffer)
+      data: Crypto.bufferToBase64(quantized.buffer)
     };
   }
   
   /**
-   * Render packed 1-bit image data to canvas
+   * Render 8-bit grayscale image data to canvas
    * @param {HTMLCanvasElement} canvas
    * @param {{w: number, h: number, data: string}} imgData
    */
@@ -207,16 +233,17 @@ const ImageProcessor = (() => {
     const ctx = canvas.getContext('2d');
     const imageData = ctx.createImageData(w, h);
     
-    const packed = new Uint8Array(Crypto.base64ToBuffer(data));
-    const bits = unpackBits(packed, w * h);
+    const gray = new Uint8Array(Crypto.base64ToBuffer(data));
+    const { r, g, b } = GRAPHITE_COLOR;
     
-    for (let i = 0; i < bits.length; i++) {
+    for (let i = 0; i < w * h; i++) {
       const idx = i * 4;
-      const value = bits[i] ? 255 : 0;
-      imageData.data[idx] = value;     // R
-      imageData.data[idx + 1] = value; // G
-      imageData.data[idx + 2] = value; // B
-      imageData.data[idx + 3] = 255;   // A
+      const value = gray[i] ?? 255;
+      const alpha = 255 - value;
+      imageData.data[idx] = r;
+      imageData.data[idx + 1] = g;
+      imageData.data[idx + 2] = b;
+      imageData.data[idx + 3] = alpha;
     }
     
     ctx.putImageData(imageData, 0, 0);
@@ -239,6 +266,8 @@ const ImageProcessor = (() => {
     renderToCanvas,
     createPreviewCanvas,
     packBits,
-    unpackBits
+    unpackBits,
+    GRAPHITE_COLOR,
+    GRAPHITE_CSS
   };
 })();

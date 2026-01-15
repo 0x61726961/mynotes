@@ -13,6 +13,8 @@ const DoodleEditor = (() => {
   let grid = null;
   let isDrawing = false;
   let lastCell = null;
+  let brushSize = 1;
+  let isErasing = false;
   
   /**
    * Initialize doodle editor on a canvas element
@@ -28,6 +30,7 @@ const DoodleEditor = (() => {
     
     // Initialize empty grid
     clear();
+    resetTools();
     
     // Event listeners
     canvas.addEventListener('mousedown', handleStart);
@@ -48,6 +51,11 @@ const DoodleEditor = (() => {
   function clear() {
     grid = new Uint8Array(GRID_SIZE * GRID_SIZE);
     render();
+  }
+
+  function resetTools() {
+    brushSize = 1;
+    isErasing = false;
   }
   
   /**
@@ -83,6 +91,44 @@ const DoodleEditor = (() => {
     grid[idx] = grid[idx] ? 0 : 1;
     renderPixel(gx, gy);
   }
+
+  function getBrushOffsets(size) {
+    if (size === 2) {
+      return [
+        [0, 0],
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1]
+      ];
+    }
+
+    if (size >= 3) {
+      const offsets = [];
+      for (let dy = -1; dy <= 1; dy += 1) {
+        for (let dx = -1; dx <= 1; dx += 1) {
+          offsets.push([dx, dy]);
+        }
+      }
+      return offsets;
+    }
+
+    return [[0, 0]];
+  }
+
+  function getDrawValue() {
+    return isErasing ? 0 : 1;
+  }
+
+  function applyBrush(gx, gy, value) {
+    const offsets = getBrushOffsets(brushSize);
+    offsets.forEach(([dx, dy]) => {
+      const x = gx + dx;
+      const y = gy + dy;
+      if (x < 0 || y < 0 || x >= GRID_SIZE || y >= GRID_SIZE) return;
+      setPixel(x, y, value);
+    });
+  }
   
   /**
    * Set a pixel (draw mode)
@@ -105,7 +151,7 @@ const DoodleEditor = (() => {
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, DISPLAY_SIZE, DISPLAY_SIZE);
     
-    ctx.fillStyle = '#000000';
+    ctx.fillStyle = ImageProcessor.GRAPHITE_CSS;
     for (let y = 0; y < GRID_SIZE; y++) {
       for (let x = 0; x < GRID_SIZE; x++) {
         if (grid[y * GRID_SIZE + x]) {
@@ -136,7 +182,7 @@ const DoodleEditor = (() => {
    */
   function renderPixel(gx, gy) {
     const value = grid[gy * GRID_SIZE + gx];
-    ctx.fillStyle = value ? '#000000' : '#ffffff';
+    ctx.fillStyle = value ? ImageProcessor.GRAPHITE_CSS : '#ffffff';
     ctx.fillRect(gx * PIXEL_SIZE, gy * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
   }
   
@@ -144,7 +190,7 @@ const DoodleEditor = (() => {
   function handleStart(e) {
     isDrawing = true;
     const { gx, gy } = getGridCoords(e.clientX, e.clientY);
-    togglePixel(gx, gy);
+    applyBrush(gx, gy, getDrawValue());
     lastCell = { gx, gy };
   }
   
@@ -154,14 +200,14 @@ const DoodleEditor = (() => {
     const { gx, gy } = getGridCoords(e.clientX, e.clientY);
     
     if (!lastCell) {
-      setPixel(gx, gy, 1);
+      applyBrush(gx, gy, getDrawValue());
       lastCell = { gx, gy };
       return;
     }
     
     if (gx !== lastCell.gx || gy !== lastCell.gy) {
       // Draw line from last cell to current cell
-      drawLine(lastCell.gx, lastCell.gy, gx, gy);
+      drawLine(lastCell.gx, lastCell.gy, gx, gy, getDrawValue());
       lastCell = { gx, gy };
     }
   }
@@ -182,7 +228,7 @@ const DoodleEditor = (() => {
     const touch = e.touches[0];
     isDrawing = true;
     const { gx, gy } = getGridCoords(touch.clientX, touch.clientY);
-    togglePixel(gx, gy);
+    applyBrush(gx, gy, getDrawValue());
     lastCell = { gx, gy };
   }
   
@@ -194,13 +240,13 @@ const DoodleEditor = (() => {
     const { gx, gy } = getGridCoords(touch.clientX, touch.clientY);
     
     if (!lastCell) {
-      setPixel(gx, gy, 1);
+      applyBrush(gx, gy, getDrawValue());
       lastCell = { gx, gy };
       return;
     }
     
     if (gx !== lastCell.gx || gy !== lastCell.gy) {
-      drawLine(lastCell.gx, lastCell.gy, gx, gy);
+      drawLine(lastCell.gx, lastCell.gy, gx, gy, getDrawValue());
       lastCell = { gx, gy };
     }
   }
@@ -208,7 +254,7 @@ const DoodleEditor = (() => {
   /**
    * Draw a line using Bresenham's algorithm
    */
-  function drawLine(x0, y0, x1, y1) {
+  function drawLine(x0, y0, x1, y1, value) {
     const dx = Math.abs(x1 - x0);
     const dy = Math.abs(y1 - y0);
     const sx = x0 < x1 ? 1 : -1;
@@ -216,7 +262,7 @@ const DoodleEditor = (() => {
     let err = dx - dy;
     
     while (true) {
-      setPixel(x0, y0, 1);
+      applyBrush(x0, y0, value);
       
       if (x0 === x1 && y0 === y1) break;
       
@@ -287,9 +333,9 @@ const DoodleEditor = (() => {
     for (let i = 0; i < bits.length; i++) {
       const idx = i * 4;
       if (bits[i]) {
-        imageData.data[idx] = 0;
-        imageData.data[idx + 1] = 0;
-        imageData.data[idx + 2] = 0;
+        imageData.data[idx] = ImageProcessor.GRAPHITE_COLOR.r;
+        imageData.data[idx + 1] = ImageProcessor.GRAPHITE_COLOR.g;
+        imageData.data[idx + 2] = ImageProcessor.GRAPHITE_COLOR.b;
         imageData.data[idx + 3] = 255;
       } else {
         imageData.data[idx] = 0;
@@ -303,9 +349,31 @@ const DoodleEditor = (() => {
     return canvas;
   }
   
+  function setBrushSize(size) {
+    brushSize = size;
+    isErasing = false;
+  }
+
+  function setEraser(enabled) {
+    isErasing = enabled;
+  }
+
+  function getBrushSize() {
+    return brushSize;
+  }
+
+  function isEraserEnabled() {
+    return isErasing;
+  }
+
   return {
     init,
     clear,
+    resetTools,
+    setBrushSize,
+    setEraser,
+    getBrushSize,
+    isEraserEnabled,
     getData,
     setData,
     isEmpty,

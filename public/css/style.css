@@ -500,8 +500,22 @@ html, body {
 }
 
 .doodle-tools {
-  text-align: center;
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
   margin-bottom: 1rem;
+}
+
+.doodle-tool-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.doodle-tool-btn.active,
+#doodle-eraser.active {
+  background: #333;
+  color: #fff;
 }
 
 /* ========================================
