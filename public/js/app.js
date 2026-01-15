@@ -293,6 +293,19 @@ const App = (() => {
   function markLocalChange() {
     lastLocalChangeAt = Date.now();
   }
+
+  function getRotationForNote(noteId) {
+    const el = Board.getNoteElement(noteId);
+    if (el?.dataset?.rot !== undefined) {
+      const parsed = parseFloat(el.dataset.rot);
+      if (Number.isFinite(parsed)) {
+        return parsed;
+      }
+    }
+
+    const note = Notes.getNote(noteId);
+    return note?.payload?.rot ?? 0;
+  }
   
   /**
    * Run a note update with refresh protection
@@ -331,7 +344,8 @@ const App = (() => {
     hasPendingSave = true;
     saveTimeout = setTimeout(async () => {
       try {
-        await runNoteUpdate(noteId, { x, y });
+        const rot = getRotationForNote(noteId);
+        await runNoteUpdate(noteId, { x, y, rot });
       } catch (err) {
         console.error('Failed to save note position:', err);
       } finally {
