@@ -7,7 +7,7 @@ const Notes = (() => {
   const BOARD_WIDTH = 2400;
   const BOARD_HEIGHT = 1600;
   
-  const COLORS = ['yellow', 'pink', 'blue', 'green'];
+  const COLORS = ['yellow', 'pink', 'blue', 'green', 'orange', 'lavender'];
   const COLOR_VARIANTS = ['', 'v1', 'v2'];
   
   // In-memory cache of decrypted notes
