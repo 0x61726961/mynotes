@@ -221,6 +221,8 @@ const Board = (() => {
   function startNoteDrag(e, noteEl, clientX, clientY) {
     isDragging = true;
     draggedNote = noteEl;
+
+    bringNoteToFront(noteEl);
     
     const rect = noteEl.getBoundingClientRect();
     const boardRect = corkboard.getBoundingClientRect();
@@ -327,6 +329,8 @@ const Board = (() => {
     
     isRotating = true;
     rotatingNote = noteEl;
+
+    bringNoteToFront(noteEl);
     
     const rect = noteEl.getBoundingClientRect();
     const centerX = rect.left + rect.width / 2;
@@ -401,6 +405,15 @@ const Board = (() => {
     const match = transform.match(/rotate\(([-\d.]+)deg\)/);
     return match ? parseFloat(match[1]) : 0;
   }
+
+  function bringNoteToFront(noteEl) {
+    if (!noteEl) return;
+    const noteId = noteEl.dataset.noteId;
+    const updatedAt = Notes.touchNote(noteId);
+    if (updatedAt) {
+      noteEl.style.zIndex = updatedAt;
+    }
+  }
   
   function handleRotationEnd() {
     if (!isRotating || !rotatingNote) return;
@@ -439,11 +452,13 @@ const Board = (() => {
     // Context menu on right-click
     noteEl.addEventListener('contextmenu', (e) => {
       e.preventDefault();
+      bringNoteToFront(noteEl);
       onNoteClick(noteEl.dataset.noteId, e.clientX, e.clientY, 'context');
     });
     
     // Double-click to edit
     noteEl.addEventListener('dblclick', (e) => {
+      bringNoteToFront(noteEl);
       onNoteClick(noteEl.dataset.noteId, e.clientX, e.clientY, 'edit');
     });
   }

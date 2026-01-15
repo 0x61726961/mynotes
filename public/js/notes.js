@@ -114,10 +114,19 @@ const Notes = (() => {
         const payload = await Crypto.decryptPayload(encryptionKey, note.payload);
         // Skip done notes
         if (payload.done) continue;
+
+        const createdAt = Number.isFinite(note.created_at)
+          ? note.created_at
+          : payload.created_at;
+        const updatedAt = Number.isFinite(note.updated_at)
+          ? note.updated_at
+          : createdAt;
         
         const decryptedNote = {
           id: note.id,
           payload,
+          createdAt,
+          updatedAt,
           variant: randomVariant() // Assign random variant for this session
         };
         notesCache.set(note.id, decryptedNote);
@@ -160,6 +169,8 @@ const Notes = (() => {
     const note = {
       id,
       payload,
+      createdAt: payload.created_at,
+      updatedAt: payload.created_at,
       variant: randomVariant()
     };
     notesCache.set(id, note);
@@ -176,6 +187,8 @@ const Notes = (() => {
   async function updateNote(id, updates) {
     const note = notesCache.get(id);
     if (!note) throw new Error('Note not found in cache');
+
+    note.updatedAt = Date.now();
     
     // Merge updates into payload
     Object.assign(note.payload, updates);
@@ -238,6 +251,18 @@ const Notes = (() => {
     if (!note) return;
     note.payload.rot = rot;
   }
+
+  /**
+   * Mark a note as recently touched for stacking order
+   * @param {string} id
+   * @returns {number|null} Updated timestamp
+   */
+  function touchNote(id) {
+    const note = notesCache.get(id);
+    if (!note) return null;
+    note.updatedAt = Date.now();
+    return note.updatedAt;
+  }
   
   /**
    * Render a note DOM element
@@ -254,6 +279,7 @@ const Notes = (() => {
     el.dataset.rot = rot;
     el.style.left = `${x}px`;
     el.style.top = `${y}px`;
+    el.style.zIndex = note.updatedAt ?? note.createdAt ?? payload.created_at ?? 0;
     el.style.setProperty('--note-rot', `${rot}deg`);
     
     // Content area
@@ -321,6 +347,7 @@ const Notes = (() => {
     deleteNote,
     getNote,
     setNoteRotation,
+    touchNote,
     renderNote,
     updateNotePosition,
     clampPosition,

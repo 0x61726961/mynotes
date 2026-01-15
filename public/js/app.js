@@ -223,8 +223,9 @@ const App = (() => {
       boardScreen.classList.add('active');
       
       // Clear and render notes
+      const orderedNotes = sortNotesForStacking(notes);
       Board.clearNotes();
-      notes.forEach(note => {
+      orderedNotes.forEach(note => {
         const noteEl = Notes.renderNote(note);
         Board.addNote(noteEl);
       });
@@ -258,9 +259,10 @@ const App = (() => {
       const notes = await Notes.loadNotes({ resetCache: true });
       if (lastLocalChangeAt > refreshStartedAt) return;
       
+      const orderedNotes = sortNotesForStacking(notes);
       const draggingNoteId = Board.getDraggingNoteId();
       Board.clearNotes(draggingNoteId ? { skipNoteId: draggingNoteId } : undefined);
-      notes.forEach(note => {
+      orderedNotes.forEach(note => {
         if (draggingNoteId && note.id === draggingNoteId) return;
         const noteEl = Notes.renderNote(note);
         Board.addNote(noteEl);
@@ -292,6 +294,15 @@ const App = (() => {
   
   function markLocalChange() {
     lastLocalChangeAt = Date.now();
+  }
+
+  function sortNotesForStacking(notes) {
+    return [...notes].sort((a, b) => {
+      const aTime = a.updatedAt ?? a.createdAt ?? a.payload?.created_at ?? 0;
+      const bTime = b.updatedAt ?? b.createdAt ?? b.payload?.created_at ?? 0;
+      if (aTime !== bTime) return aTime - bTime;
+      return (a.id || '').localeCompare(b.id || '');
+    });
   }
 
   function getRotationForNote(noteId) {
