@@ -35,6 +35,8 @@
   /* Shadows */
   --note-shadow: var(--shadow-hard-soft);
   --note-shadow-drag: var(--shadow-hard-strong);
+  --note-shadow-color: rgba(47, 43, 36, 0.22);
+  --note-shadow-color-drag: rgba(47, 43, 36, 0.32);
 }
 
 /* ========================================
@@ -388,30 +390,60 @@ html, body {
   position: absolute;
   width: var(--note-size);
   height: var(--note-size);
-  padding: 12px;
   cursor: grab;
   user-select: none;
   touch-action: none;
-  box-shadow: var(--note-shadow);
-  transition: box-shadow 0.2s, transform 0.15s;
+  overflow: visible;
+}
+
+.note-shadow {
+  position: absolute;
+  inset: 0;
+  transform: translate(6px, 6px);
+  pointer-events: none;
+  transition: transform 0.15s;
+}
+
+.note-shadow-inner {
+  width: 100%;
+  height: 100%;
+  background: var(--note-shadow-color);
+  transform: rotate(var(--note-rot, 0deg));
+  transform-origin: center;
+  transition: transform 0.15s, background 0.15s;
+}
+
+.note-body {
+  position: absolute;
+  inset: 0;
+  padding: 12px;
+  border: 2px solid var(--ink);
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  border: 2px solid var(--ink);
   transform: rotate(var(--note-rot, 0deg));
+  transform-origin: center;
+  transition: transform 0.15s;
 }
-
 
 .sticky-note.dragging {
   cursor: grabbing;
-  box-shadow: var(--note-shadow-drag);
   z-index: 1000;
   opacity: 0.92;
   transition: none;
-  will-change: left, top, transform;
+  will-change: left, top;
 }
 
-.sticky-note.dropping {
+.sticky-note.dragging .note-shadow {
+  transform: translate(8px, 8px);
+}
+
+.sticky-note.dragging .note-shadow-inner {
+  background: var(--note-shadow-color-drag);
+}
+
+.sticky-note.dropping .note-body,
+.sticky-note.dropping .note-shadow-inner {
   animation: drop-bounce 0.2s ease-out;
 }
 
@@ -422,26 +454,26 @@ html, body {
 }
 
 /* Note Colors */
-.sticky-note.yellow { background-color: var(--note-yellow); }
-.sticky-note.pink { background-color: var(--note-pink); }
-.sticky-note.blue { background-color: var(--note-blue); }
-.sticky-note.green { background-color: var(--note-green); }
-.sticky-note.orange { background-color: var(--note-orange); }
-.sticky-note.lavender { background-color: var(--note-lavender); }
+.note-body.yellow { background-color: var(--note-yellow); }
+.note-body.pink { background-color: var(--note-pink); }
+.note-body.blue { background-color: var(--note-blue); }
+.note-body.green { background-color: var(--note-green); }
+.note-body.orange { background-color: var(--note-orange); }
+.note-body.lavender { background-color: var(--note-lavender); }
 
 /* Color variants for realism */
-.sticky-note.yellow.v1 { background-color: #fff84d; }
-.sticky-note.yellow.v2 { background-color: #ffef33; }
-.sticky-note.pink.v1 { background-color: #ff8fc4; }
-.sticky-note.pink.v2 { background-color: #ff6fae; }
-.sticky-note.blue.v1 { background-color: #8affff; }
-.sticky-note.blue.v2 { background-color: #6af7f7; }
-.sticky-note.green.v1 { background-color: #a8ffa8; }
-.sticky-note.green.v2 { background-color: #88f088; }
-.sticky-note.orange.v1 { background-color: #ffddb6; }
-.sticky-note.orange.v2 { background-color: #ffc88a; }
-.sticky-note.lavender.v1 { background-color: #e2d5ff; }
-.sticky-note.lavender.v2 { background-color: #cbb8ff; }
+.note-body.yellow.v1 { background-color: #fff84d; }
+.note-body.yellow.v2 { background-color: #ffef33; }
+.note-body.pink.v1 { background-color: #ff8fc4; }
+.note-body.pink.v2 { background-color: #ff6fae; }
+.note-body.blue.v1 { background-color: #8affff; }
+.note-body.blue.v2 { background-color: #6af7f7; }
+.note-body.green.v1 { background-color: #a8ffa8; }
+.note-body.green.v2 { background-color: #88f088; }
+.note-body.orange.v1 { background-color: #ffddb6; }
+.note-body.orange.v2 { background-color: #ffc88a; }
+.note-body.lavender.v1 { background-color: #e2d5ff; }
+.note-body.lavender.v2 { background-color: #cbb8ff; }
 
 /* Note content */
 .note-content {

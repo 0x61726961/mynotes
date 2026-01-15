@@ -321,7 +321,7 @@ const Notes = (() => {
     const { type, x, y, rot, color, text, img, doodle } = payload;
     
     const el = document.createElement('div');
-    el.className = `sticky-note ${color} ${variant}`;
+    el.className = 'sticky-note';
     el.dataset.noteId = id;
     el.dataset.rot = rot;
     el.style.left = `${x}px`;
@@ -329,6 +329,16 @@ const Notes = (() => {
     el.style.zIndex = note.stackIndex ?? 0;
     el.style.setProperty('--note-rot', `${rot}deg`);
     
+    const shadow = document.createElement('div');
+    shadow.className = 'note-shadow';
+
+    const shadowInner = document.createElement('div');
+    shadowInner.className = 'note-shadow-inner';
+    shadow.appendChild(shadowInner);
+
+    const body = document.createElement('div');
+    body.className = `note-body ${color} ${variant}`;
+
     // Content area
     const content = document.createElement('div');
     content.className = 'note-content';
@@ -344,8 +354,10 @@ const Notes = (() => {
       content.appendChild(canvas);
     }
     
-    el.appendChild(content);
-    
+    body.appendChild(content);
+    el.appendChild(shadow);
+    el.appendChild(body);
+
     return el;
   }
   
