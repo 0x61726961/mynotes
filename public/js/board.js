@@ -4,6 +4,7 @@
 
 const Board = (() => {
   const DRAG_Z_INDEX = Number.MAX_SAFE_INTEGER;
+  const ROTATION_EDGE_SIZE = 16;
   let viewport = null;
   let corkboard = null;
   let panOffset = { x: 0, y: 0 };
@@ -179,13 +180,24 @@ const Board = (() => {
     noteEl.addEventListener('mousedown', handleNoteMouseDown);
     noteEl.addEventListener('touchstart', handleNoteTouchStart, { passive: false });
   }
+
+  function isRotationEdge(noteEl, clientX, clientY) {
+    const rect = noteEl.getBoundingClientRect();
+    if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) {
+      return false;
+    }
+    return (
+      clientX - rect.left <= ROTATION_EDGE_SIZE ||
+      rect.right - clientX <= ROTATION_EDGE_SIZE ||
+      clientY - rect.top <= ROTATION_EDGE_SIZE ||
+      rect.bottom - clientY <= ROTATION_EDGE_SIZE
+    );
+  }
   
   function handleNoteMouseDown(e) {
     const noteEl = e.currentTarget;
-    const rotHandle = noteEl.querySelector('.rotate-handle');
-    
-    // Check if clicking rotate handle
-    if (e.target === rotHandle) {
+
+    if (isRotationEdge(noteEl, e.clientX, e.clientY)) {
       startRotation(e, noteEl);
       return;
     }
@@ -203,12 +215,8 @@ const Board = (() => {
     
     const noteEl = e.currentTarget;
     const touch = e.touches[0];
-    const rotHandle = noteEl.querySelector('.rotate-handle');
-    
-    // Check if touching rotate handle
-    const rect = rotHandle.getBoundingClientRect();
-    if (touch.clientX >= rect.left && touch.clientX <= rect.right &&
-        touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
+
+    if (isRotationEdge(noteEl, touch.clientX, touch.clientY)) {
       startRotation(e, noteEl);
       return;
     }
@@ -331,6 +339,7 @@ const Board = (() => {
     
     isRotating = true;
     rotatingNote = noteEl;
+    noteEl.classList.add('rotating');
 
     liftNoteForDrag(noteEl);
     
@@ -438,6 +447,7 @@ const Board = (() => {
     const rotation = getNoteRotation(rotatingNote);
 
     bringNoteToFront(rotatingNote);
+    rotatingNote.classList.remove('rotating');
     
     onNoteRotate(noteId, rotation);
     

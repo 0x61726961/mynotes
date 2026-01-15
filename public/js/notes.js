@@ -339,12 +339,6 @@ const Notes = (() => {
     
     el.appendChild(content);
     
-    // Rotation handle
-    const rotHandle = document.createElement('div');
-    rotHandle.className = 'rotate-handle';
-    rotHandle.textContent = '↻';
-    el.appendChild(rotHandle);
-    
     return el;
   }
   
