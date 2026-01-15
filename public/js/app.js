@@ -7,10 +7,11 @@ const App = (() => {
   // DOM elements
   let loginScreen, boardScreen;
   let passphraseInput, passphraseForm, openBoardBtn, rememberRoomCheckbox;
-  let textModal, imageModal, doodleModal;
+  let textModal, imageModal, doodleModal, deleteModal;
   let loadingOverlay, loadingText;
   let doodleBrushButtons, doodleEraserBtn;
   let addFabContainer, addFabButton, addFabMenu;
+  let confirmDeleteBtn, cancelDeleteBtn;
   
   // State
   let currentBoardId = null;
@@ -19,6 +20,7 @@ const App = (() => {
   let currentEditNoteId = null;
   let imageData = null;
   let pendingDraftNoteId = null;
+  let pendingDeleteNoteId = null;
   
   // Debounce for saves
   let pendingSaveTimers = new Map();
@@ -48,6 +50,7 @@ const App = (() => {
     textModal = document.getElementById('text-modal');
     imageModal = document.getElementById('image-modal');
     doodleModal = document.getElementById('doodle-modal');
+    deleteModal = document.getElementById('delete-modal');
     loadingOverlay = document.getElementById('loading-overlay');
     loadingText = document.getElementById('loading-text');
     doodleBrushButtons = document.querySelectorAll('.doodle-tool-btn');
@@ -55,6 +58,8 @@ const App = (() => {
     addFabContainer = document.getElementById('add-fab-container');
     addFabButton = document.getElementById('add-fab');
     addFabMenu = document.getElementById('add-fab-menu');
+    confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+    cancelDeleteBtn = document.getElementById('cancel-delete-btn');
     
     // Setup event listeners
     setupLoginEvents();
@@ -216,6 +221,9 @@ const App = (() => {
     document.getElementById('save-doodle-btn').addEventListener('click', saveDoodleNote);
     document.getElementById('delete-doodle-btn').addEventListener('click', deleteCurrentNoteFromModal);
 
+    confirmDeleteBtn?.addEventListener('click', confirmDeleteNote);
+    cancelDeleteBtn?.addEventListener('click', closeDeleteModal);
+
     doodleBrushButtons.forEach(btn => {
       btn.addEventListener('click', () => {
         const size = Number.parseInt(btn.dataset.brush, 10);
@@ -246,10 +254,20 @@ const App = (() => {
         }
       });
     });
+
+    deleteModal?.addEventListener('click', (e) => {
+      if (e.target === deleteModal) {
+        closeDeleteModal();
+      }
+    });
     
     // Close on escape key
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
+        if (deleteModal?.classList.contains('active')) {
+          closeDeleteModal();
+          return;
+        }
         closeAllModals();
       }
     });
@@ -427,16 +445,34 @@ const App = (() => {
   }
 
   async function deleteCurrentNoteFromModal() {
-    const noteId = currentEditNoteId || pendingDraftNoteId;
+    const noteId = currentEditNoteId;
     if (!noteId) {
       closeAllModals();
       return;
     }
 
-    if (!confirm('Delete this note?')) {
+    openDeleteModal(noteId);
+  }
+
+  function openDeleteModal(noteId) {
+    if (!deleteModal) return;
+    pendingDeleteNoteId = noteId;
+    deleteModal.classList.add('active');
+  }
+
+  function closeDeleteModal() {
+    if (!deleteModal) return;
+    deleteModal.classList.remove('active');
+    pendingDeleteNoteId = null;
+  }
+
+  async function confirmDeleteNote() {
+    if (!pendingDeleteNoteId) {
+      closeDeleteModal();
       return;
     }
 
+    const noteId = pendingDeleteNoteId;
     try {
       markLocalChange();
       await Notes.deleteNote(noteId);
@@ -448,6 +484,7 @@ const App = (() => {
         pendingDraftNoteId = null;
       }
       currentEditNoteId = null;
+      closeDeleteModal();
       closeAllModals();
     }
   }
@@ -828,6 +865,7 @@ const App = (() => {
     closeTextModal();
     closeImageModal();
     closeDoodleModal();
+    closeDeleteModal();
   }
   
   /**
