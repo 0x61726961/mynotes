@@ -151,10 +151,7 @@ const App = (() => {
     // Color pickers
     document.querySelectorAll('.color-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        // Deselect siblings
-        btn.parentElement.querySelectorAll('.color-btn').forEach(b => b.classList.remove('selected'));
-        btn.classList.add('selected');
-        selectedColor = btn.dataset.color;
+        selectColor(btn.dataset.color);
       });
     });
     
@@ -444,7 +441,7 @@ const App = (() => {
     } else {
       textarea.value = '';
       currentEditNoteId = null;
-      selectColor('yellow');
+      selectColor(Notes.randomColor());
     }
     
     textModal.classList.add('active');
@@ -506,7 +503,7 @@ const App = (() => {
     document.getElementById('image-input').value = '';
     document.getElementById('image-preview').classList.remove('has-image');
     document.getElementById('save-image-btn').disabled = true;
-    selectColor('yellow');
+    selectColor(Notes.randomColor());
     imageModal.classList.add('active');
   }
   
@@ -563,7 +560,7 @@ const App = (() => {
    */
   function openDoodleModal() {
     DoodleEditor.clear();
-    selectColor('yellow');
+    selectColor(Notes.randomColor());
     doodleModal.classList.add('active');
   }
   
@@ -610,13 +607,8 @@ const App = (() => {
    */
   function selectColor(color) {
     selectedColor = color;
-    document.querySelectorAll('.modal.active .color-btn').forEach(btn => {
+    document.querySelectorAll('.color-btn').forEach(btn => {
       btn.classList.toggle('selected', btn.dataset.color === color);
-    });
-    
-    // Also update in non-active modals for consistency
-    document.querySelectorAll(`.color-btn[data-color="${color}"]`).forEach(btn => {
-      btn.classList.add('selected');
     });
   }
   

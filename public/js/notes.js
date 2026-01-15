@@ -43,6 +43,14 @@ const Notes = (() => {
   }
   
   /**
+   * Get a random base note color
+   * @returns {string}
+   */
+  function randomColor() {
+    return COLORS[Math.floor(Math.random() * COLORS.length)];
+  }
+  
+  /**
    * Create a new note payload object
    * @param {string} type - 'text', 'image', or 'doodle'
    * @param {object} data - Type-specific data
@@ -59,7 +67,7 @@ const Notes = (() => {
       x: Math.max(0, Math.min(BOARD_WIDTH - NOTE_SIZE, x)),
       y: Math.max(0, Math.min(BOARD_HEIGHT - NOTE_SIZE, y)),
       rot: randomRotation(),
-      color: color || 'yellow',
+      color: color || randomColor(),
       created_at: Date.now(),
       done: false
     };
@@ -302,6 +310,7 @@ const Notes = (() => {
     renderNote,
     updateNotePosition,
     clampPosition,
+    randomColor,
     randomRotation
   };
 })();

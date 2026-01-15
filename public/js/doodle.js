@@ -33,7 +33,8 @@ const DoodleEditor = (() => {
     canvas.addEventListener('mousedown', handleStart);
     canvas.addEventListener('mousemove', handleMove);
     canvas.addEventListener('mouseup', handleEnd);
-    canvas.addEventListener('mouseleave', handleEnd);
+    canvas.addEventListener('mouseleave', handleLeave);
+    window.addEventListener('mouseup', handleEnd);
     
     // Touch events
     canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
@@ -152,10 +153,22 @@ const DoodleEditor = (() => {
     
     const { gx, gy } = getGridCoords(e.clientX, e.clientY);
     
-    if (lastCell && (gx !== lastCell.gx || gy !== lastCell.gy)) {
+    if (!lastCell) {
+      setPixel(gx, gy, 1);
+      lastCell = { gx, gy };
+      return;
+    }
+    
+    if (gx !== lastCell.gx || gy !== lastCell.gy) {
       // Draw line from last cell to current cell
       drawLine(lastCell.gx, lastCell.gy, gx, gy);
       lastCell = { gx, gy };
+    }
+  }
+  
+  function handleLeave() {
+    if (isDrawing) {
+      lastCell = null;
     }
   }
   
@@ -180,7 +193,13 @@ const DoodleEditor = (() => {
     const touch = e.touches[0];
     const { gx, gy } = getGridCoords(touch.clientX, touch.clientY);
     
-    if (lastCell && (gx !== lastCell.gx || gy !== lastCell.gy)) {
+    if (!lastCell) {
+      setPixel(gx, gy, 1);
+      lastCell = { gx, gy };
+      return;
+    }
+    
+    if (gx !== lastCell.gx || gy !== lastCell.gy) {
       drawLine(lastCell.gx, lastCell.gy, gx, gy);
       lastCell = { gx, gy };
     }
