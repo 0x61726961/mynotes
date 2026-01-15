@@ -12,6 +12,7 @@ const App = (() => {
   let doodleBrushButtons, doodleEraserBtn;
   let addFabContainer, addFabButton, addFabMenu;
   let confirmDeleteBtn, cancelDeleteBtn;
+  let roomLabel;
   
   // State
   let currentBoardId = null;
@@ -60,6 +61,7 @@ const App = (() => {
     addFabMenu = document.getElementById('add-fab-menu');
     confirmDeleteBtn = document.getElementById('confirm-delete-btn');
     cancelDeleteBtn = document.getElementById('cancel-delete-btn');
+    roomLabel = document.getElementById('room-label');
     
     // Setup event listeners
     setupLoginEvents();
@@ -298,6 +300,7 @@ const App = (() => {
       // Switch to board screen
       loginScreen.classList.remove('active');
       boardScreen.classList.add('active');
+      setRoomLabel(passphrase);
       
       // Clear and render notes
       const orderedNotes = sortNotesForStacking(notes);
@@ -543,6 +546,7 @@ const App = (() => {
     clearAutoJoinPreference();
     boardScreen.classList.remove('active');
     loginScreen.classList.add('active');
+    setRoomLabel('');
 
     if (rememberRoomCheckbox) {
       rememberRoomCheckbox.checked = Boolean(wasRemembering);
@@ -950,6 +954,14 @@ const App = (() => {
     document.querySelectorAll('.color-btn').forEach(btn => {
       btn.classList.toggle('selected', btn.dataset.color === color);
     });
+  }
+
+  function setRoomLabel(passphrase) {
+    if (!roomLabel) return;
+    const label = passphrase ? `${passphrase}` : '[UNKOWN AREA]';
+    roomLabel.textContent = label;
+    roomLabel.setAttribute('title', label);
+    roomLabel.classList.toggle('is-hidden', !label);
   }
   
   /**

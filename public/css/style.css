@@ -231,6 +231,30 @@ html, body {
 }
 
 /* Floating action buttons */
+.room-label {
+  position: fixed;
+  top: var(--fab-edge);
+  left: var(--fab-edge);
+  min-height: var(--fab-size);
+  padding: 0 16px;
+  border-radius: var(--fab-radius);
+  background: #3a3a3a;
+  color: #f2f2f2;
+  border: 2px solid var(--ink);
+  box-shadow: var(--shadow-hard-soft);
+  display: flex;
+  align-items: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  z-index: 1500;
+  user-select: none;
+}
+
+.room-label.is-hidden {
+  display: none;
+}
+
 .fab-btn {
   width: var(--fab-size);
   height: var(--fab-size);
@@ -750,6 +774,11 @@ html, body {
   
   .app-title {
     font-size: 1.5rem;
+  }
+
+  .room-label {
+    padding: 0 12px;
+    font-size: 0.78rem;
   }
   
   .note-editor {
