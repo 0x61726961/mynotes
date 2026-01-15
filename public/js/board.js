@@ -452,10 +452,25 @@ const Board = (() => {
   
   /**
    * Clear all notes from board
+   * @param {object} options
+   * @param {string|null} [options.skipNoteId]
    */
-  function clearNotes() {
+  function clearNotes(options = {}) {
+    const { skipNoteId = null } = options;
     const notes = corkboard.querySelectorAll('.sticky-note');
-    notes.forEach(el => el.remove());
+    notes.forEach(el => {
+      if (skipNoteId && el.dataset.noteId === skipNoteId) return;
+      el.remove();
+    });
+  }
+
+  /**
+   * Get the currently dragged note ID
+   * @returns {string|null}
+   */
+  function getDraggingNoteId() {
+    if (!isDragging || !draggedNote) return null;
+    return draggedNote.dataset.noteId;
   }
   
   /**
@@ -474,6 +489,7 @@ const Board = (() => {
     removeNote,
     clearNotes,
     getNoteElement,
+    getDraggingNoteId,
     setupNoteDragging
   };
 })();

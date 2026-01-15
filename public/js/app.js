@@ -258,8 +258,10 @@ const App = (() => {
       const notes = await Notes.loadNotes({ resetCache: true });
       if (lastLocalChangeAt > refreshStartedAt) return;
       
-      Board.clearNotes();
+      const draggingNoteId = Board.getDraggingNoteId();
+      Board.clearNotes(draggingNoteId ? { skipNoteId: draggingNoteId } : undefined);
       notes.forEach(note => {
+        if (draggingNoteId && note.id === draggingNoteId) return;
         const noteEl = Notes.renderNote(note);
         Board.addNote(noteEl);
       });
