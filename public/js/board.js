@@ -4,8 +4,8 @@
 
 const Board = (() => {
   const DRAG_Z_INDEX = Number.MAX_SAFE_INTEGER;
-  const ROTATION_EDGE_SIZE = 24;
-  const ROTATION_OUTSIDE_SIZE = 8;
+  const ROTATION_EDGE_SIZE = 12;
+  const ROTATION_OUTSIDE_SIZE = 24;
   let viewport = null;
   let corkboard = null;
   let panOffset = { x: 0, y: 0 };
@@ -105,6 +105,12 @@ const Board = (() => {
   function handlePanStart(e) {
     // Only pan if clicking on board background
     if (e.target !== corkboard && e.target !== viewport) return;
+
+    const rotationTarget = findRotationNoteAtPoint(e.clientX, e.clientY);
+    if (rotationTarget) {
+      startRotation(e, rotationTarget);
+      return;
+    }
     
     isPanning = true;
     panStart.x = e.clientX - panOffset.x;
@@ -147,10 +153,17 @@ const Board = (() => {
   function handleTouchPanStart(e) {
     if (e.touches.length !== 1) return;
     if (e.target !== corkboard && e.target !== viewport) return;
+
+    const touch = e.touches[0];
+    const rotationTarget = findRotationNoteAtPoint(touch.clientX, touch.clientY);
+    if (rotationTarget) {
+      e.preventDefault();
+      startRotation(e, rotationTarget);
+      return;
+    }
     
     e.preventDefault();
     isPanning = true;
-    const touch = e.touches[0];
     panStart.x = touch.clientX - panOffset.x;
     panStart.y = touch.clientY - panOffset.y;
   }
@@ -185,25 +198,50 @@ const Board = (() => {
 
   function isRotationEdge(noteEl, clientX, clientY) {
     const rect = noteEl.getBoundingClientRect();
-    const expandedLeft = rect.left - ROTATION_OUTSIDE_SIZE;
-    const expandedRight = rect.right + ROTATION_OUTSIDE_SIZE;
-    const expandedTop = rect.top - ROTATION_OUTSIDE_SIZE;
-    const expandedBottom = rect.bottom + ROTATION_OUTSIDE_SIZE;
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    const angle = -(getNoteRotation(noteEl) * Math.PI) / 180;
 
-    if (clientX < expandedLeft || clientX > expandedRight || clientY < expandedTop || clientY > expandedBottom) {
+    const dx = clientX - centerX;
+    const dy = clientY - centerY;
+    const localX = dx * Math.cos(angle) - dy * Math.sin(angle);
+    const localY = dx * Math.sin(angle) + dy * Math.cos(angle);
+
+    const halfWidth = noteEl.offsetWidth / 2;
+    const halfHeight = noteEl.offsetHeight / 2;
+
+    if (
+      Math.abs(localX) > halfWidth + ROTATION_OUTSIDE_SIZE ||
+      Math.abs(localY) > halfHeight + ROTATION_OUTSIDE_SIZE
+    ) {
       return false;
     }
 
-    if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) {
+    if (Math.abs(localX) > halfWidth || Math.abs(localY) > halfHeight) {
       return true;
     }
 
     return (
-      clientX - rect.left <= ROTATION_EDGE_SIZE ||
-      rect.right - clientX <= ROTATION_EDGE_SIZE ||
-      clientY - rect.top <= ROTATION_EDGE_SIZE ||
-      rect.bottom - clientY <= ROTATION_EDGE_SIZE
+      halfWidth - Math.abs(localX) <= ROTATION_EDGE_SIZE ||
+      halfHeight - Math.abs(localY) <= ROTATION_EDGE_SIZE
     );
+  }
+
+  function findRotationNoteAtPoint(clientX, clientY) {
+    const notes = Array.from(corkboard.querySelectorAll('.sticky-note'));
+    let candidate = null;
+    let topZIndex = -Infinity;
+
+    notes.forEach((noteEl) => {
+      if (!isRotationEdge(noteEl, clientX, clientY)) return;
+      const zIndex = Number.parseFloat(noteEl.style.zIndex) || 0;
+      if (zIndex >= topZIndex) {
+        topZIndex = zIndex;
+        candidate = noteEl;
+      }
+    });
+
+    return candidate;
   }
   
   function handleNoteMouseDown(e) {
