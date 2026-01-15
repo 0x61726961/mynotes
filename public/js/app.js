@@ -649,11 +649,20 @@ const App = (() => {
     }
   }
   
+  function setModalDeleteButtonState(buttonId, isDraft) {
+    const button = document.getElementById(buttonId);
+    if (!button) return;
+    button.style.display = isDraft ? 'none' : '';
+    button.disabled = isDraft;
+  }
+
   /**
    * Open text note modal
    */
   function openTextModal(existingNote = null) {
     const textarea = document.getElementById('note-text');
+    const isDraft = Boolean(pendingDraftNoteId && existingNote?.id === pendingDraftNoteId);
+    setModalDeleteButtonState('delete-text-btn', isDraft);
     
     if (existingNote) {
       textarea.value = existingNote.payload.text || '';
@@ -732,6 +741,8 @@ const App = (() => {
     const imageInput = document.getElementById('image-input');
     const imagePreview = document.getElementById('image-preview');
     const saveButton = document.getElementById('save-image-btn');
+    const isDraft = Boolean(pendingDraftNoteId && existingNote?.id === pendingDraftNoteId);
+    setModalDeleteButtonState('delete-image-btn', isDraft);
 
     imageInput.value = '';
     imagePreview.classList.remove('has-image');
@@ -831,6 +842,9 @@ const App = (() => {
     DoodleEditor.clear();
     DoodleEditor.resetTools();
     updateDoodleToolUI();
+
+    const isDraft = Boolean(pendingDraftNoteId && existingNote?.id === pendingDraftNoteId);
+    setModalDeleteButtonState('delete-doodle-btn', isDraft);
 
     if (existingNote) {
       currentEditNoteId = existingNote.id;
