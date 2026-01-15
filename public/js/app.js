@@ -13,6 +13,7 @@ const App = (() => {
   let addFabContainer, addFabButton, addFabMenu;
   let confirmDeleteBtn, cancelDeleteBtn;
   let roomLabel;
+  let backgroundCanvas;
   
   // State
   let currentBoardId = null;
@@ -22,6 +23,7 @@ const App = (() => {
   let imageData = null;
   let pendingDraftNoteId = null;
   let pendingDeleteNoteId = null;
+  let roomBackgroundController = null;
   
   // Debounce for saves
   let pendingSaveTimers = new Map();
@@ -62,6 +64,7 @@ const App = (() => {
     confirmDeleteBtn = document.getElementById('confirm-delete-btn');
     cancelDeleteBtn = document.getElementById('cancel-delete-btn');
     roomLabel = document.getElementById('room-label');
+    backgroundCanvas = document.getElementById('room-bg');
     
     // Setup event listeners
     setupLoginEvents();
@@ -300,6 +303,7 @@ const App = (() => {
       // Switch to board screen
       loginScreen.classList.remove('active');
       boardScreen.classList.add('active');
+      startRoomBackground(currentBoardId);
       setRoomLabel(passphrase);
       
       // Clear and render notes
@@ -542,6 +546,7 @@ const App = (() => {
     encryptionKey = null;
     Board.clearNotes();
     stopNotesRefresh();
+    stopRoomBackground();
     
     clearAutoJoinPreference();
     boardScreen.classList.remove('active');
@@ -958,10 +963,34 @@ const App = (() => {
 
   function setRoomLabel(passphrase) {
     if (!roomLabel) return;
-    const label = passphrase ? `${passphrase}` : '[UNKOWN AREA]';
+    const label = passphrase ? `${passphrase}` : '[UNKNOWN AREA]';
     roomLabel.textContent = label;
     roomLabel.setAttribute('title', label);
     roomLabel.classList.toggle('is-hidden', !label);
+  }
+
+  function startRoomBackground(seedString) {
+    if (!backgroundCanvas || !window.RoomBackground?.startRoomBackground || !seedString) return;
+    stopRoomBackground();
+    try {
+      roomBackgroundController = window.RoomBackground.startRoomBackground({
+        canvas: backgroundCanvas,
+        seedString
+      });
+      document.body.classList.add('room-bg-active');
+    } catch (err) {
+      console.warn('Failed to start room background:', err);
+      document.body.classList.remove('room-bg-active');
+      roomBackgroundController = null;
+    }
+  }
+
+  function stopRoomBackground() {
+    if (roomBackgroundController?.stop) {
+      roomBackgroundController.stop();
+    }
+    roomBackgroundController = null;
+    document.body.classList.remove('room-bg-active');
   }
   
   /**
