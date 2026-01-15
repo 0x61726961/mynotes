@@ -18,16 +18,16 @@
         <div class="input-group">
           <label for="passphrase">Enter your board passphrase</label>
           <input 
-            type="password" 
+            type="text" 
             id="passphrase" 
             name="passphrase" 
-            placeholder="Your secret passphrase..."
+            placeholder="public"
             autocomplete="off"
-            required
           >
-          <button type="button" id="toggle-password" class="toggle-password" aria-label="Show password">
-            👁️
-          </button>
+        </div>
+        <div class="remember-room">
+          <input type="checkbox" id="remember-room" name="remember-room">
+          <label for="remember-room">Remember room name</label>
         </div>
         <button type="submit" id="open-board-btn" class="btn btn-primary">
           Open Board

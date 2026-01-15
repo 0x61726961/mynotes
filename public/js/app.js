@@ -6,7 +6,7 @@
 const App = (() => {
   // DOM elements
   let loginScreen, boardScreen;
-  let passphraseInput, passphraseForm, openBoardBtn, togglePasswordBtn;
+  let passphraseInput, passphraseForm, openBoardBtn, rememberRoomCheckbox;
   let textModal, imageModal, doodleModal;
   let contextMenu;
   let loadingOverlay, loadingText;
@@ -29,6 +29,9 @@ const App = (() => {
   let isRefreshing = false;
   let lastLocalChangeAt = 0;
   const REFRESH_INTERVAL_MS = 5000;
+  const DEFAULT_ROOM = 'public';
+  const REMEMBER_ROOM_KEY = 'mynotes.rememberRoom';
+  const LAST_ROOM_KEY = 'mynotes.lastRoom';
   
   /**
    * Initialize the application
@@ -40,7 +43,7 @@ const App = (() => {
     passphraseInput = document.getElementById('passphrase');
     passphraseForm = document.getElementById('passphrase-form');
     openBoardBtn = document.getElementById('open-board-btn');
-    togglePasswordBtn = document.getElementById('toggle-password');
+    rememberRoomCheckbox = document.getElementById('remember-room');
     textModal = document.getElementById('text-modal');
     imageModal = document.getElementById('image-modal');
     doodleModal = document.getElementById('doodle-modal');
@@ -52,6 +55,7 @@ const App = (() => {
     
     // Setup event listeners
     setupLoginEvents();
+    applyRememberedRoom();
     setupToolbarEvents();
     setupModalEvents();
     setupContextMenu();
@@ -78,10 +82,12 @@ const App = (() => {
       await openBoard();
     });
     
-    togglePasswordBtn.addEventListener('click', () => {
-      const type = passphraseInput.type === 'password' ? 'text' : 'password';
-      passphraseInput.type = type;
-      togglePasswordBtn.textContent = type === 'password' ? '👁️' : '🙈';
+    rememberRoomCheckbox?.addEventListener('change', () => {
+      if (rememberRoomCheckbox.checked) {
+        persistRememberedRoom(getPassphraseValue());
+      } else {
+        clearRememberedRoom();
+      }
     });
   }
   
@@ -215,11 +221,8 @@ const App = (() => {
    * Open board with passphrase
    */
   async function openBoard() {
-    const passphrase = passphraseInput.value.trim();
-    if (!passphrase) {
-      alert('Please enter a passphrase');
-      return;
-    }
+    const passphrase = getPassphraseValue();
+    persistRememberedRoom(passphrase);
     
     showLoading('Deriving encryption key...');
     
@@ -389,6 +392,7 @@ const App = (() => {
     
     boardScreen.classList.remove('active');
     loginScreen.classList.add('active');
+    applyRememberedRoom();
   }
   
   /**
@@ -679,6 +683,52 @@ const App = (() => {
     });
 
     doodleEraserBtn.classList.toggle('active', erasing);
+  }
+
+  function getPassphraseValue() {
+    const entered = passphraseInput.value.trim();
+    return entered || DEFAULT_ROOM;
+  }
+
+  function applyRememberedRoom() {
+    try {
+      const remember = localStorage.getItem(REMEMBER_ROOM_KEY) === 'true';
+      if (rememberRoomCheckbox) {
+        rememberRoomCheckbox.checked = remember;
+      }
+
+      if (remember) {
+        const lastRoom = localStorage.getItem(LAST_ROOM_KEY);
+        passphraseInput.value = lastRoom || '';
+      } else {
+        passphraseInput.value = '';
+      }
+    } catch (err) {
+      console.warn('Unable to load remembered room:', err);
+    }
+  }
+
+  function persistRememberedRoom(passphrase) {
+    if (!rememberRoomCheckbox?.checked) {
+      clearRememberedRoom();
+      return;
+    }
+
+    try {
+      localStorage.setItem(REMEMBER_ROOM_KEY, 'true');
+      localStorage.setItem(LAST_ROOM_KEY, passphrase);
+    } catch (err) {
+      console.warn('Unable to save remembered room:', err);
+    }
+  }
+
+  function clearRememberedRoom() {
+    try {
+      localStorage.removeItem(REMEMBER_ROOM_KEY);
+      localStorage.removeItem(LAST_ROOM_KEY);
+    } catch (err) {
+      console.warn('Unable to clear remembered room:', err);
+    }
   }
 
   function selectColor(color) {
