@@ -218,6 +218,27 @@ const Board = (() => {
     noteEl.addEventListener('touchstart', handleNoteTouchStart, { passive: false });
   }
 
+  /**
+   * Setup all note interactions on a note element
+   * @param {HTMLElement} noteEl
+   */
+  function setupNoteInteractions(noteEl) {
+    setupNoteDragging(noteEl);
+
+    // Context menu on right-click
+    noteEl.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      bringNoteToFront(noteEl);
+      onNoteClick(noteEl.dataset.noteId, e.clientX, e.clientY, 'context');
+    });
+
+    // Double-click to edit
+    noteEl.addEventListener('dblclick', (e) => {
+      bringNoteToFront(noteEl);
+      onNoteClick(noteEl.dataset.noteId, e.clientX, e.clientY, 'edit');
+    });
+  }
+
   function isRotationEdge(noteEl, clientX, clientY) {
     const rect = noteEl.getBoundingClientRect();
     const centerX = rect.left + rect.width / 2;
@@ -545,20 +566,7 @@ const Board = (() => {
    */
   function addNote(noteEl) {
     corkboard.appendChild(noteEl);
-    setupNoteDragging(noteEl);
-    
-    // Context menu on right-click
-    noteEl.addEventListener('contextmenu', (e) => {
-      e.preventDefault();
-      bringNoteToFront(noteEl);
-      onNoteClick(noteEl.dataset.noteId, e.clientX, e.clientY, 'context');
-    });
-    
-    // Double-click to edit
-    noteEl.addEventListener('dblclick', (e) => {
-      bringNoteToFront(noteEl);
-      onNoteClick(noteEl.dataset.noteId, e.clientX, e.clientY, 'edit');
-    });
+    setupNoteInteractions(noteEl);
   }
   
   /**
@@ -613,6 +621,7 @@ const Board = (() => {
     getNoteElement,
     getDraggingNoteId,
     setupNoteDragging,
+    setupNoteInteractions,
     getViewportCenterPosition
   };
 })();

@@ -267,12 +267,13 @@ const App = (() => {
       btn.addEventListener('click', () => {
         const action = btn.dataset.action;
         handleContextAction(action);
-        closeContextMenu();
+        closeContextMenu({ resetSelection: action !== 'edit' });
       });
     });
     
     // Close on any click outside
     document.addEventListener('click', (e) => {
+      if (!contextMenu.classList.contains('active')) return;
       if (!contextMenu.contains(e.target)) {
         closeContextMenu();
       }
@@ -598,9 +599,12 @@ const App = (() => {
   /**
    * Close context menu
    */
-  function closeContextMenu() {
+  function closeContextMenu(options = {}) {
+    const { resetSelection = true } = options;
     contextMenu.classList.remove('active');
-    currentEditNoteId = null;
+    if (resetSelection) {
+      currentEditNoteId = null;
+    }
   }
   
   /**
@@ -698,7 +702,7 @@ const App = (() => {
         if (oldEl && note) {
           const newEl = Notes.renderNote(note);
           oldEl.replaceWith(newEl);
-          Board.setupNoteDragging(newEl);
+          Board.setupNoteInteractions(newEl);
         }
       } else {
         // Create new note
@@ -799,7 +803,7 @@ const App = (() => {
         if (oldEl && note) {
           const newEl = Notes.renderNote(note);
           oldEl.replaceWith(newEl);
-          Board.setupNoteDragging(newEl);
+          Board.setupNoteInteractions(newEl);
         }
       } else {
         markLocalChange();
@@ -872,7 +876,7 @@ const App = (() => {
         if (oldEl && note) {
           const newEl = Notes.renderNote(note);
           oldEl.replaceWith(newEl);
-          Board.setupNoteDragging(newEl);
+          Board.setupNoteInteractions(newEl);
         }
       } else {
         markLocalChange();
@@ -911,7 +915,7 @@ const App = (() => {
 
     doodleBrushButtons.forEach(btn => {
       const size = Number.parseInt(btn.dataset.brush, 10);
-      const isActive = !erasing && size === currentSize;
+      const isActive = size === currentSize;
       btn.classList.toggle('active', isActive);
     });
 
