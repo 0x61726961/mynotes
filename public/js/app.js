@@ -19,9 +19,9 @@ const App = (() => {
   let imageData = null;
   
   // Debounce for saves
-  let saveTimeout = null;
+  let pendingSaveTimers = new Map();
+  let pendingNoteUpdates = new Map();
   let pendingSaveCount = 0;
-  let hasPendingSave = false;
   
   // Refresh state
   let refreshInterval = null;
@@ -251,7 +251,7 @@ const App = (() => {
    * Refresh notes from server
    */
   async function refreshBoard() {
-    if (isRefreshing || !currentBoardId || hasPendingSave || pendingSaveCount > 0) return;
+    if (isRefreshing || !currentBoardId || pendingSaveCount > 0 || pendingSaveTimers.size > 0) return;
     const refreshStartedAt = Date.now();
     isRefreshing = true;
     
@@ -334,6 +334,31 @@ const App = (() => {
       pendingSaveCount = Math.max(0, pendingSaveCount - 1);
     }
   }
+
+  function queueNoteSave(noteId, updates, onError) {
+    markLocalChange();
+    const existingUpdates = pendingNoteUpdates.get(noteId) || {};
+    pendingNoteUpdates.set(noteId, { ...existingUpdates, ...updates });
+
+    const existingTimer = pendingSaveTimers.get(noteId);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+    }
+
+    const timerId = setTimeout(async () => {
+      pendingSaveTimers.delete(noteId);
+      const pendingUpdates = pendingNoteUpdates.get(noteId);
+      pendingNoteUpdates.delete(noteId);
+      if (!pendingUpdates) return;
+      try {
+        await runNoteUpdate(noteId, pendingUpdates);
+      } catch (err) {
+        onError?.(err);
+      }
+    }, 500);
+
+    pendingSaveTimers.set(noteId, timerId);
+  }
   
   /**
    * Logout and return to login screen
@@ -352,38 +377,26 @@ const App = (() => {
    * Handle note position change
    */
   function handleNoteMove(noteId, x, y) {
-    // Debounce save
-    clearTimeout(saveTimeout);
-    markLocalChange();
-    hasPendingSave = true;
-    saveTimeout = setTimeout(async () => {
-      try {
-        const rot = getRotationForNote(noteId);
-        await runNoteUpdate(noteId, { x, y, rot });
-      } catch (err) {
+    queueNoteSave(
+      noteId,
+      { x, y, rot: getRotationForNote(noteId) },
+      (err) => {
         console.error('Failed to save note position:', err);
-      } finally {
-        hasPendingSave = false;
       }
-    }, 500);
+    );
   }
   
   /**
    * Handle note rotation change
    */
   function handleNoteRotate(noteId, rotation) {
-    clearTimeout(saveTimeout);
-    markLocalChange();
-    hasPendingSave = true;
-    saveTimeout = setTimeout(async () => {
-      try {
-        await runNoteUpdate(noteId, { rot: rotation });
-      } catch (err) {
+    queueNoteSave(
+      noteId,
+      { rot: rotation },
+      (err) => {
         console.error('Failed to save note rotation:', err);
-      } finally {
-        hasPendingSave = false;
       }
-    }, 500);
+    );
   }
   
   /**
