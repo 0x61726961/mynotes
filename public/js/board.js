@@ -3,6 +3,7 @@
  */
 
 const Board = (() => {
+  const DRAG_Z_INDEX = 2147483647;
   let viewport = null;
   let corkboard = null;
   let panOffset = { x: 0, y: 0 };
@@ -222,7 +223,7 @@ const Board = (() => {
     isDragging = true;
     draggedNote = noteEl;
 
-    bringNoteToFront(noteEl);
+    liftNoteForDrag(noteEl);
     
     const rect = noteEl.getBoundingClientRect();
     const boardRect = corkboard.getBoundingClientRect();
@@ -308,6 +309,7 @@ const Board = (() => {
     
     draggedNote.classList.remove('dragging');
     draggedNote.classList.add('dropping');
+    bringNoteToFront(draggedNote);
     
     setTimeout(() => {
       if (draggedNote) {
@@ -330,7 +332,7 @@ const Board = (() => {
     isRotating = true;
     rotatingNote = noteEl;
 
-    bringNoteToFront(noteEl);
+    liftNoteForDrag(noteEl);
     
     const rect = noteEl.getBoundingClientRect();
     const centerX = rect.left + rect.width / 2;
@@ -414,6 +416,11 @@ const Board = (() => {
       noteEl.style.zIndex = updatedAt;
     }
   }
+
+  function liftNoteForDrag(noteEl) {
+    if (!noteEl) return;
+    noteEl.style.zIndex = DRAG_Z_INDEX;
+  }
   
   function handleRotationEnd() {
     if (!isRotating || !rotatingNote) return;
@@ -429,6 +436,8 @@ const Board = (() => {
     
     const noteId = rotatingNote.dataset.noteId;
     const rotation = getNoteRotation(rotatingNote);
+
+    bringNoteToFront(rotatingNote);
     
     onNoteRotate(noteId, rotation);
     
