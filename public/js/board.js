@@ -5,6 +5,7 @@
 const Board = (() => {
   const DRAG_Z_INDEX = Number.MAX_SAFE_INTEGER;
   const ROTATION_EDGE_SIZE = 24;
+  const ROTATION_OUTSIDE_SIZE = 8;
   let viewport = null;
   let corkboard = null;
   let panOffset = { x: 0, y: 0 };
@@ -184,9 +185,19 @@ const Board = (() => {
 
   function isRotationEdge(noteEl, clientX, clientY) {
     const rect = noteEl.getBoundingClientRect();
-    if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) {
+    const expandedLeft = rect.left - ROTATION_OUTSIDE_SIZE;
+    const expandedRight = rect.right + ROTATION_OUTSIDE_SIZE;
+    const expandedTop = rect.top - ROTATION_OUTSIDE_SIZE;
+    const expandedBottom = rect.bottom + ROTATION_OUTSIDE_SIZE;
+
+    if (clientX < expandedLeft || clientX > expandedRight || clientY < expandedTop || clientY > expandedBottom) {
       return false;
     }
+
+    if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) {
+      return true;
+    }
+
     return (
       clientX - rect.left <= ROTATION_EDGE_SIZE ||
       rect.right - clientX <= ROTATION_EDGE_SIZE ||
