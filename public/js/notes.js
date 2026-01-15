@@ -243,7 +243,7 @@ const Notes = (() => {
     el.dataset.rot = rot;
     el.style.left = `${x}px`;
     el.style.top = `${y}px`;
-    el.style.transform = `rotate(${rot}deg)`;
+    el.style.setProperty('--note-rot', `${rot}deg`);
     
     // Content area
     const content = document.createElement('div');
@@ -282,7 +282,7 @@ const Notes = (() => {
     el.dataset.rot = rot;
     el.style.left = `${x}px`;
     el.style.top = `${y}px`;
-    el.style.transform = `rotate(${rot}deg)`;
+    el.style.setProperty('--note-rot', `${rot}deg`);
   }
   
   /**
