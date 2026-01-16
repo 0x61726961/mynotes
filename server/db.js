@@ -2,14 +2,11 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const crypto = require('crypto');
 
-// Initialize database
 const dbPath = process.env.DB_PATH || path.join(__dirname, '../data/mynotes.db');
 const db = new Database(dbPath);
 
-// Enable WAL mode for better concurrent performance
 db.pragma('journal_mode = WAL');
 
-// Create tables
 db.exec(`
   CREATE TABLE IF NOT EXISTS boards (
     id TEXT PRIMARY KEY,
@@ -30,7 +27,6 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_notes_deleted ON notes(deleted);
 `);
 
-// Prepared statements for performance
 const stmts = {
   getBoard: db.prepare('SELECT * FROM boards WHERE id = ?'),
   createBoard: db.prepare('INSERT INTO boards (id, created_at) VALUES (?, ?)'),
@@ -42,12 +38,10 @@ const stmts = {
   setDeleted: db.prepare('UPDATE notes SET deleted = ?, updated_at = ? WHERE id = ? AND board_id = ?'),
 };
 
-// Generate a random note ID
 function generateNoteId() {
   return crypto.randomBytes(16).toString('hex');
 }
 
-// Ensure a board exists (create if not)
 function ensureBoard(boardId) {
   const existing = stmts.getBoard.get(boardId);
   if (!existing) {
@@ -55,12 +49,10 @@ function ensureBoard(boardId) {
   }
 }
 
-// Get all non-deleted notes for a board
 function getNotes(boardId) {
   return stmts.getNotes.all(boardId);
 }
 
-// Create a new note
 function createNote(boardId, payload) {
   const id = generateNoteId();
   const now = Date.now();
@@ -68,7 +60,6 @@ function createNote(boardId, payload) {
   return { id, board_id: boardId, payload, created_at: now, updated_at: now };
 }
 
-// Update a note
 function updateNote(boardId, noteId, payload, deleted) {
   const existing = stmts.getNote.get(noteId, boardId);
   if (!existing) return false;
@@ -86,7 +77,6 @@ function updateNote(boardId, noteId, payload, deleted) {
   return true;
 }
 
-// Soft delete a note
 function deleteNote(boardId, noteId) {
   const existing = stmts.getNote.get(noteId, boardId);
   if (!existing) return false;

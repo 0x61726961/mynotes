@@ -1,10 +1,4 @@
-/**
- * Main application module
- * Coordinates all modules and handles UI interactions
- */
-
 const App = (() => {
-  // DOM elements
   let loginScreen, boardScreen;
   let passphraseInput, passphraseForm, openBoardBtn, rememberRoomCheckbox;
   let textModal, imageModal, doodleModal, deleteModal;
@@ -15,7 +9,6 @@ const App = (() => {
   let roomLabel;
   let backgroundCanvas;
   
-  // State
   let currentBoardId = null;
   let encryptionKey = null;
   let selectedColor = 'yellow';
@@ -25,12 +18,10 @@ const App = (() => {
   let pendingDeleteNoteId = null;
   let roomBackgroundController = null;
   
-  // Debounce for saves
   let pendingSaveTimers = new Map();
   let pendingNoteUpdates = new Map();
   let pendingSaveCount = 0;
   
-  // Refresh state
   let refreshInterval = null;
   let isRefreshing = false;
   let lastLocalChangeAt = 0;
@@ -142,11 +133,7 @@ const App = (() => {
     setTextById('loading-text', loading?.derivingKey);
   }
 
-  /**
-   * Initialize the application
-   */
   function init() {
-    // Get DOM elements
     loginScreen = document.getElementById('login-screen');
     boardScreen = document.getElementById('board-screen');
     passphraseInput = document.getElementById('passphrase');
@@ -172,7 +159,6 @@ const App = (() => {
     
     applyStrings();
 
-    // Setup event listeners
     setupLoginEvents();
     applyRememberedRoom();
     attemptAutoJoin();
@@ -180,10 +166,8 @@ const App = (() => {
     setupToolbarEvents();
     setupModalEvents();
     
-    // Initialize doodle editor
     DoodleEditor.init(document.getElementById('doodle-canvas'));
     
-    // Initialize board with callbacks
     Board.init({
       onNoteMove: handleNoteMove,
       onNoteRotate: handleNoteRotate,
@@ -193,9 +177,6 @@ const App = (() => {
     console.log('MyNotes initialized');
   }
   
-  /**
-   * Setup login screen events
-   */
   function setupLoginEvents() {
     passphraseForm.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -211,9 +192,6 @@ const App = (() => {
     });
   }
   
-  /**
-   * Setup floating action button events
-   */
   function setupFabEvents() {
     if (!addFabContainer || !addFabButton || !addFabMenu) return;
 
@@ -251,9 +229,6 @@ const App = (() => {
     }
   }
 
-  /**
-   * Setup toolbar events
-   */
   function setupToolbarEvents() {
     document.getElementById('add-text-btn').addEventListener('click', async () => {
       closeAddFabMenu();
@@ -284,16 +259,11 @@ const App = (() => {
     });
   }
   
-  /**
-   * Setup modal events
-   */
   function setupModalEvents() {
-    // Text modal
     document.getElementById('cancel-text-btn').addEventListener('click', closeTextModal);
     document.getElementById('save-text-btn').addEventListener('click', saveTextNote);
     document.getElementById('delete-text-btn').addEventListener('click', deleteCurrentNoteFromModal);
     
-    // Image modal
     const imageDropZone = document.getElementById('image-drop-zone');
     const imageInput = document.getElementById('image-input');
     const imagePreview = document.getElementById('image-preview');
@@ -326,7 +296,6 @@ const App = (() => {
     document.getElementById('save-image-btn').addEventListener('click', saveImageNote);
     document.getElementById('delete-image-btn').addEventListener('click', deleteCurrentNoteFromModal);
     
-    // Doodle modal
     document.getElementById('doodle-clear').addEventListener('click', () => DoodleEditor.clear());
     document.getElementById('cancel-doodle-btn').addEventListener('click', closeDoodleModal);
     document.getElementById('save-doodle-btn').addEventListener('click', saveDoodleNote);
@@ -350,14 +319,12 @@ const App = (() => {
       updateDoodleToolUI();
     });
     
-    // Color pickers
     document.querySelectorAll('.color-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         selectColor(btn.dataset.color);
       });
     });
     
-    // Close modals on background click
     [textModal, imageModal, doodleModal].forEach(modal => {
       modal.addEventListener('click', (e) => {
         if (e.target === modal) {
@@ -372,7 +339,6 @@ const App = (() => {
       }
     });
     
-    // Close on escape key
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         if (deleteModal?.classList.contains('active')) {
@@ -384,9 +350,6 @@ const App = (() => {
     });
   }
   
-  /**
-   * Open board with passphrase
-   */
   async function openBoard() {
     const passphrase = getPassphraseValue();
     persistRememberedRoom(passphrase);
@@ -394,25 +357,20 @@ const App = (() => {
     showLoading(resolveString(STRINGS.loading?.derivingKey, 'Deriving encryption key...'));
     
     try {
-      // Derive board ID and encryption key
       currentBoardId = await Crypto.deriveBoardId(passphrase);
       encryptionKey = await Crypto.deriveEncryptionKey(passphrase);
       
-      // Initialize notes module
       Notes.init(currentBoardId, encryptionKey);
       
       showLoading(resolveString(STRINGS.loading?.loadingNotes, 'Loading notes...'));
       
-      // Load notes from server
       const notes = await Notes.loadNotes();
       
-      // Switch to board screen
       loginScreen.classList.remove('active');
       boardScreen.classList.add('active');
       startRoomBackground(currentBoardId);
       setRoomLabel(passphrase);
       
-      // Clear and render notes
       const orderedNotes = sortNotesForStacking(notes);
       Board.clearNotes();
       orderedNotes.forEach(note => {
@@ -420,12 +378,10 @@ const App = (() => {
         Board.addNote(noteEl);
       });
       
-      // Center board
       Board.centerBoard();
       
       hideLoading();
       
-      // Clear passphrase from input (security)
       passphraseInput.value = '';
       
       startNotesRefresh();
@@ -437,9 +393,6 @@ const App = (() => {
     }
   }
   
-  /**
-   * Refresh notes from server
-   */
   async function refreshBoard() {
     if (isRefreshing || !currentBoardId || pendingSaveCount > 0 || pendingSaveTimers.size > 0) return;
     const refreshStartedAt = Date.now();
@@ -464,17 +417,11 @@ const App = (() => {
     }
   }
   
-  /**
-   * Start periodic refresh
-   */
   function startNotesRefresh() {
     stopNotesRefresh();
     refreshInterval = setInterval(refreshBoard, REFRESH_INTERVAL_MS);
   }
   
-  /**
-   * Stop periodic refresh
-   */
   function stopNotesRefresh() {
     if (refreshInterval) {
       clearInterval(refreshInterval);
@@ -622,11 +569,6 @@ const App = (() => {
     }
   }
   
-  /**
-   * Run a note update with refresh protection
-   * @param {string} noteId
-   * @param {object} updates
-   */
   async function runNoteUpdate(noteId, updates) {
     pendingSaveCount += 1;
     try {
@@ -661,9 +603,6 @@ const App = (() => {
     pendingSaveTimers.set(noteId, timerId);
   }
   
-  /**
-   * Logout and return to login screen
-   */
   function logout() {
     const wasRemembering = rememberRoomCheckbox?.checked;
     const lastRoom = localStorage.getItem(LAST_ROOM_KEY) || '';
@@ -685,9 +624,6 @@ const App = (() => {
     passphraseInput.value = wasRemembering ? lastRoom : '';
   }
   
-  /**
-   * Handle note position change
-   */
   function handleNoteMove(noteId, x, y) {
     queueNoteSave(
       noteId,
@@ -699,9 +635,6 @@ const App = (() => {
     );
   }
   
-  /**
-   * Handle note rotation change
-   */
   function handleNoteRotate(noteId, rotation) {
     queueNoteSave(
       noteId,
@@ -713,9 +646,6 @@ const App = (() => {
     );
   }
   
-  /**
-   * Handle note click (edit only)
-   */
   function handleNoteClick(noteId, clientX, clientY, type) {
     if (type !== 'edit') return;
 
@@ -740,9 +670,6 @@ const App = (() => {
     button.disabled = isDraft;
   }
 
-  /**
-   * Open text note modal
-   */
   function openTextModal(existingNote = null) {
     const textarea = document.getElementById('note-text');
     const isDraft = Boolean(pendingDraftNoteId && existingNote?.id === pendingDraftNoteId);
@@ -763,9 +690,6 @@ const App = (() => {
     textarea.focus();
   }
   
-  /**
-   * Close text modal
-   */
   function closeTextModal() {
     textModal.classList.remove('active');
     currentEditNoteId = null;
@@ -773,9 +697,6 @@ const App = (() => {
     resumeNotesRefreshIfReady();
   }
   
-  /**
-   * Save text note
-   */
   async function saveTextNote() {
     const text = document.getElementById('note-text').value.trim();
     if (!text) {
@@ -787,7 +708,6 @@ const App = (() => {
     
     try {
       if (currentEditNoteId) {
-        // Update existing note
         const updates = {
           text,
           color: selectedColor,
@@ -796,7 +716,6 @@ const App = (() => {
         markLocalChange();
         await runNoteUpdate(currentEditNoteId, updates);
         
-        // Re-render note
         const note = Notes.getNote(currentEditNoteId);
         const oldEl = Board.getNoteElement(currentEditNoteId);
         if (oldEl && note) {
@@ -805,7 +724,6 @@ const App = (() => {
           Board.setupNoteInteractions(newEl);
         }
       } else {
-        // Create new note
         markLocalChange();
         const position = getNewNotePosition();
         const note = await Notes.createNote('text', { text }, selectedColor, position);
@@ -824,9 +742,6 @@ const App = (() => {
     }
   }
   
-  /**
-   * Open image modal
-   */
   function openImageModal(existingNote = null) {
     imageData = null;
     const imageInput = document.getElementById('image-input');
@@ -860,9 +775,6 @@ const App = (() => {
     pauseNotesRefreshForModal();
   }
   
-  /**
-   * Close image modal
-   */
   function closeImageModal() {
     imageModal.classList.remove('active');
     imageData = null;
@@ -872,15 +784,11 @@ const App = (() => {
     resumeNotesRefreshIfReady();
   }
   
-  /**
-   * Process uploaded image file
-   */
   async function processImageFile(file) {
     try {
       showLoading(resolveString(STRINGS.loading?.processingImage, 'Processing image...'));
       imageData = await ImageProcessor.processImage(file);
       
-      // Show preview
       const preview = document.getElementById('image-preview');
       const dropZone = document.getElementById('image-drop-zone');
       ImageProcessor.renderToCanvas(preview, imageData);
@@ -896,9 +804,6 @@ const App = (() => {
     }
   }
   
-  /**
-   * Save image note
-   */
   async function saveImageNote() {
     if (!imageData) return;
 
@@ -939,9 +844,6 @@ const App = (() => {
     }
   }
   
-  /**
-   * Open doodle modal
-   */
   function openDoodleModal(existingNote = null) {
     DoodleEditor.clear();
     DoodleEditor.resetTools();
@@ -965,9 +867,6 @@ const App = (() => {
     pauseNotesRefreshForModal();
   }
   
-  /**
-   * Close doodle modal
-   */
   function closeDoodleModal() {
     doodleModal.classList.remove('active');
     currentEditNoteId = null;
@@ -975,9 +874,6 @@ const App = (() => {
     resumeNotesRefreshIfReady();
   }
 
-  /**
-   * Save doodle note
-   */
   async function saveDoodleNote() {
     if (DoodleEditor.isEmpty()) {
       showToast(resolveString(STRINGS.toasts?.drawSomething, 'Please draw something first'), { variant: 'info' });
@@ -1032,9 +928,6 @@ const App = (() => {
     }
   }
   
-  /**
-   * Close all modals
-   */
   function closeAllModals() {
     closeTextModal();
     closeImageModal();
@@ -1042,9 +935,6 @@ const App = (() => {
     closeDeleteModal();
   }
   
-  /**
-   * Select color in current modal
-   */
   function updateDoodleToolUI() {
     const currentSize = DoodleEditor.getBrushSize();
     const erasing = DoodleEditor.isEraserEnabled();
@@ -1178,22 +1068,15 @@ const App = (() => {
     setTimeout(removeToast, duration);
   }
 
-  /**
-   * Show loading overlay
-   */
   function showLoading(text) {
     loadingText.textContent = text;
     loadingOverlay.classList.add('active');
   }
   
-  /**
-   * Hide loading overlay
-   */
   function hideLoading() {
     loadingOverlay.classList.remove('active');
   }
   
-  // Initialize on DOM ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {

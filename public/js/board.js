@@ -1,7 +1,3 @@
-/**
- * Board module - Canvas panning and note dragging
- */
-
 const Board = (() => {
   const DRAG_Z_INDEX = Number.MAX_SAFE_INTEGER;
   const ROTATION_EDGE_SIZE = 12;
@@ -14,14 +10,12 @@ const Board = (() => {
   let panRafId = null;
   let pendingPanPoint = null;
   
-  // Note dragging state
   let draggedNote = null;
   let dragOffset = { x: 0, y: 0 };
   let isDragging = false;
   let dragRafId = null;
   let pendingDragPoint = null;
   
-  // Rotation state
   let isRotating = false;
   let rotatingNote = null;
   let rotateStart = 0;
@@ -30,15 +24,10 @@ const Board = (() => {
   let rotationRafId = null;
   let pendingRotationPoint = null;
   
-  // Callbacks
   let onNoteMove = null;
   let onNoteRotate = null;
   let onNoteClick = null;
   
-  /**
-   * Initialize board module
-   * @param {object} callbacks - Event callbacks
-   */
   function init(callbacks = {}) {
     viewport = document.getElementById('board-viewport');
     corkboard = document.getElementById('corkboard');
@@ -47,27 +36,20 @@ const Board = (() => {
     onNoteRotate = callbacks.onNoteRotate || (() => {});
     onNoteClick = callbacks.onNoteClick || (() => {});
     
-    // Center board in viewport
     centerBoard();
     
-    // Event listeners for panning
     viewport.addEventListener('mousedown', handlePanStart);
     viewport.addEventListener('mousemove', handlePanMove);
     viewport.addEventListener('mouseup', handlePanEnd);
     viewport.addEventListener('mouseleave', handlePanEnd);
     
-    // Touch events for panning
     viewport.addEventListener('touchstart', handleTouchPanStart, { passive: false });
     viewport.addEventListener('touchmove', handleTouchPanMove, { passive: false });
     viewport.addEventListener('touchend', handleTouchPanEnd);
     
-    // Window resize
     window.addEventListener('resize', centerBoard);
   }
   
-  /**
-   * Center board in viewport
-   */
   function centerBoard() {
     const vw = viewport.clientWidth;
     const vh = viewport.clientHeight;
@@ -78,16 +60,10 @@ const Board = (() => {
     updateBoardPosition();
   }
   
-  /**
-   * Update board transform
-   */
   function updateBoardPosition() {
     corkboard.style.transform = `translate3d(${panOffset.x}px, ${panOffset.y}px, 0)`;
   }
   
-  /**
-   * Clamp pan offset to keep board visible
-   */
   function clampPanOffset() {
     const vw = viewport.clientWidth;
     const vh = viewport.clientHeight;
@@ -101,10 +77,6 @@ const Board = (() => {
     panOffset.y = Math.max(minVisible - bh, Math.min(vh - minVisible, panOffset.y));
   }
 
-  /**
-   * Get a board position centered in the current viewport
-   * @returns {{x: number, y: number}}
-   */
   function getViewportCenterPosition() {
     if (!viewport || !corkboard) {
       return Notes.clampPosition(
@@ -123,9 +95,7 @@ const Board = (() => {
     return Notes.clampPosition(x, y);
   }
   
-  // Pan handlers
   function handlePanStart(e) {
-    // Only pan if clicking on board background
     if (e.target !== corkboard && e.target !== viewport) return;
 
     const rotationTarget = findRotationNoteAtPoint(e.clientX, e.clientY);
@@ -171,7 +141,6 @@ const Board = (() => {
     viewport.classList.remove('dragging');
   }
   
-  // Touch pan handlers
   function handleTouchPanStart(e) {
     if (e.touches.length !== 1) return;
     if (e.target !== corkboard && e.target !== viewport) return;
@@ -209,23 +178,14 @@ const Board = (() => {
     }
   }
   
-  /**
-   * Setup note dragging on a note element
-   * @param {HTMLElement} noteEl
-   */
   function setupNoteDragging(noteEl) {
     noteEl.addEventListener('mousedown', handleNoteMouseDown);
     noteEl.addEventListener('touchstart', handleNoteTouchStart, { passive: false });
   }
 
-  /**
-   * Setup all note interactions on a note element
-   * @param {HTMLElement} noteEl
-   */
   function setupNoteInteractions(noteEl) {
     setupNoteDragging(noteEl);
 
-    // Double-click to edit
     noteEl.addEventListener('dblclick', (e) => {
       bringNoteToFront(noteEl);
       onNoteClick(noteEl.dataset.noteId, e.clientX, e.clientY, 'edit');
@@ -290,7 +250,6 @@ const Board = (() => {
     
     startNoteDrag(e, noteEl, e.clientX, e.clientY);
     
-    // Setup move/up handlers on document
     document.addEventListener('mousemove', handleNoteDrag);
     document.addEventListener('mouseup', handleNoteUp);
   }
@@ -322,7 +281,6 @@ const Board = (() => {
     const rect = noteEl.getBoundingClientRect();
     const boardRect = corkboard.getBoundingClientRect();
     
-    // Calculate offset from click to note position
     const noteX = parseFloat(noteEl.style.left);
     const noteY = parseFloat(noteEl.style.top);
     
@@ -364,10 +322,8 @@ const Board = (() => {
     let x = clientX - boardRect.left - dragOffset.x;
     let y = clientY - boardRect.top - dragOffset.y;
     
-    // Clamp within board
     const clamped = Notes.clampPosition(x, y);
     
-    // Get current rotation
     const rot = getNoteRotation(draggedNote);
     
     Notes.updateNotePosition(draggedNote, clamped.x, clamped.y, rot);
@@ -411,14 +367,12 @@ const Board = (() => {
       releasedNote.classList.remove('dropping');
     }, 300);
     
-    // Notify callback
     onNoteMove(noteId, x, y);
     
     isDragging = false;
     draggedNote = null;
   }
   
-  // Rotation handlers
   function startRotation(e, noteEl) {
     e.preventDefault();
     e.stopPropagation();
@@ -553,19 +507,11 @@ const Board = (() => {
     document.removeEventListener('touchend', handleRotationEnd);
   }
   
-  /**
-   * Add a note element to the board
-   * @param {HTMLElement} noteEl
-   */
   function addNote(noteEl) {
     corkboard.appendChild(noteEl);
     setupNoteInteractions(noteEl);
   }
   
-  /**
-   * Remove a note element from the board
-   * @param {string} noteId
-   */
   function removeNote(noteId) {
     const el = corkboard.querySelector(`[data-note-id="${noteId}"]`);
     if (el) {
@@ -573,11 +519,6 @@ const Board = (() => {
     }
   }
   
-  /**
-   * Clear all notes from board
-   * @param {object} options
-   * @param {string|null} [options.skipNoteId]
-   */
   function clearNotes(options = {}) {
     const { skipNoteId = null } = options;
     const notes = corkboard.querySelectorAll('.sticky-note');
@@ -587,20 +528,11 @@ const Board = (() => {
     });
   }
 
-  /**
-   * Get the currently dragged note ID
-   * @returns {string|null}
-   */
   function getDraggingNoteId() {
     if (!isDragging || !draggedNote) return null;
     return draggedNote.dataset.noteId;
   }
   
-  /**
-   * Get note element by ID
-   * @param {string} noteId
-   * @returns {HTMLElement|null}
-   */
   function getNoteElement(noteId) {
     return corkboard.querySelector(`[data-note-id="${noteId}"]`);
   }

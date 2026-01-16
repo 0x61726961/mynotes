@@ -7,7 +7,6 @@ const db = require('./db');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Security headers (CSP-friendly)
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -25,7 +24,6 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false,
 }));
 
-// Rate limiting per IP
 const apiLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 100, // 100 requests per minute per IP
@@ -34,29 +32,22 @@ const apiLimiter = rateLimit({
   message: { error: 'Too many requests, please try again later.' }
 });
 
-// Apply rate limiting to API routes
 app.use('/api/', apiLimiter);
 
-// Parse JSON with size limit
 app.use(express.json({ limit: '500kb' }));
 
-// Serve static files from public directory
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Serve shared assets (e.g., login hint images)
 app.use('/assets', express.static(path.join(__dirname, '../assets')));
 
-// Validate board_id format (hex string, 64 chars for SHA-256)
 function isValidBoardId(id) {
   return typeof id === 'string' && /^[a-f0-9]{64}$/i.test(id);
 }
 
-// Validate note id format (UUID-like or hex)
 function isValidNoteId(id) {
   return typeof id === 'string' && /^[a-f0-9-]{8,64}$/i.test(id);
 }
 
-// Validate payload (base64 JSON with iv and ct)
 function isValidPayload(payload) {
   if (typeof payload !== 'string' || payload.length > 500000) return false;
   try {
@@ -69,7 +60,6 @@ function isValidPayload(payload) {
   }
 }
 
-// API: List notes for a board
 app.post('/api/notes/list', (req, res) => {
   try {
     const { board_id } = req.body;
@@ -86,7 +76,6 @@ app.post('/api/notes/list', (req, res) => {
   }
 });
 
-// API: Create a note
 app.post('/api/notes/create', (req, res) => {
   try {
     const { board_id, payload } = req.body;
@@ -99,10 +88,8 @@ app.post('/api/notes/create', (req, res) => {
       return res.status(400).json({ error: 'Invalid payload' });
     }
     
-    // Ensure board exists
     db.ensureBoard(board_id);
     
-    // Create note
     const note = db.createNote(board_id, payload);
     res.json({ id: note.id });
   } catch (err) {
@@ -111,7 +98,6 @@ app.post('/api/notes/create', (req, res) => {
   }
 });
 
-// API: Update a note
 app.post('/api/notes/update', (req, res) => {
   try {
     const { board_id, id, payload, deleted } = req.body;
@@ -141,7 +127,6 @@ app.post('/api/notes/update', (req, res) => {
   }
 });
 
-// API: Delete a note (soft delete)
 app.post('/api/notes/delete', (req, res) => {
   try {
     const { board_id, id } = req.body;
@@ -167,12 +152,10 @@ app.post('/api/notes/delete', (req, res) => {
   }
 });
 
-// Catch-all: serve index.html for SPA routing
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
-// Start server
 app.listen(PORT, () => {
   console.log(`MyNotes server running on http://localhost:${PORT}`);
 });

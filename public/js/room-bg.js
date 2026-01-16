@@ -1,6 +1,3 @@
-// room-bg.js — Generative room/wall background module (seeded, striking, theme-based)
-// Performance-optimized: cached layers + 15fps + DPR cap
-//
 (function () {
   "use strict";
 
@@ -10,13 +7,11 @@
   const FRAME_MS = 1000 / TARGET_FPS;
   const MOTION_SCALE = REDUCED_MOTION ? 0.5 : 1;
 
-  // Motion tuning (lean + noticeable)
-  const PARALLAX_STRENGTH = 10; // pixels
+  const PARALLAX_STRENGTH = 10;
   const PARALLAX_LERP = 0.06;
-  const DRIFT_AMPLITUDE = 5; // pixels
+  const DRIFT_AMPLITUDE = 5;
   const MOTION_OVERLAY_ALPHA = 0.26;
 
-  // === PRNG (mulberry32-ish via int hash) ===
   function createPRNG(seedString) {
     let h = 0;
     for (let i = 0; i < seedString.length; i++) {
@@ -43,7 +38,6 @@
     return a + (b - a) * t;
   }
 
-  // === Sharp, DPR-correct resize ===
   function resizeCanvasToDisplaySize(canvas, ctx) {
     const dpr = Math.min(window.devicePixelRatio || 1, DPR_CAP);
     const rect = canvas.getBoundingClientRect();
@@ -56,12 +50,10 @@
       canvas.height = displayHeight * dpr;
     }
 
-    // Draw in CSS pixels (crisp lines)
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     return { width: displayWidth, height: displayHeight };
   }
 
-  // === THEME + PALETTE ===
   function pickTheme(rand) {
     const themes = [
       {
@@ -165,11 +157,10 @@
     return themes[Math.floor(rand() * themes.length)];
   }
 
-  // === HUE BIASING (playful + avoid earthy) ===
-  const PREFERRED_HUES = [195, 215, 235, 270, 305, 330, 350, 15, 25, 160, 175]; // teal/blue/purple/pink/peach/mint
+  const PREFERRED_HUES = [195, 215, 235, 270, 305, 330, 350, 15, 25, 160, 175];
   const EARTHY_RANGES = [
-    { min: 25, max: 70 }, // browns/yellows/ochres
-    { min: 70, max: 120 }, // olive/muddy greens
+    { min: 25, max: 70 },
+    { min: 70, max: 120 },
   ];
 
   function isEarthy(h) {
@@ -188,20 +179,16 @@
   }
 
   function generatePalette(rand, theme) {
-    // Base hue: favor preferred playful hues, still theme-biased
     let hue = pickPreferredHue(rand);
 
-    // mix with theme hueBias to keep variety, but mostly preferred
     const themeHue = (theme.hueBias + (rand() - 0.5) * theme.hueSpread * 2 + 360) % 360;
     hue = (0.7 * hue + 0.3 * themeHue + 360) % 360;
 
-    // avoid earthy after mix
     if (isEarthy(hue)) hue = (hue + 80 + rand() * 40) % 360;
 
     const sat = lerp(theme.sat[0], theme.sat[1], rand());
     const light = lerp(theme.light[0], theme.light[1], rand());
 
-    // Accents: medium bold, with occasional monochrome
     let accentHue = 0;
     if (rand() < 0.18) {
       accentHue = (hue + (rand() - 0.5) * 8 + 360) % 360;
@@ -228,7 +215,6 @@
     return { hue, shades, accent, ink };
   }
 
-  // === BASE ===
   function fillBase(ctx, w, h, rand, theme, palette, time) {
     const t = time * 0.00025;
     const driftX = Math.sin(t) * 0.12;
@@ -262,7 +248,6 @@
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, w, h);
 
-    // vignette
     const vx = w * (0.5 + Math.sin(time * 0.00008) * 0.03);
     const vy = h * (0.45 + Math.cos(time * 0.00009) * 0.03);
     const vr = Math.max(w, h) * 0.72;
@@ -303,7 +288,6 @@
     ctx.restore();
   }
 
-  // === PATTERNS ===
   function drawFibers(ctx, w, h, rand, palette, time, strength = 1) {
     ctx.save();
     ctx.globalAlpha = 0.42 * strength;
@@ -626,7 +610,6 @@
     ctx.restore();
   }
 
-  // === NEW PATTERNS (Geometric / Cosmic / Drafting) ===
   function drawHexTiles(ctx, w, h, rand, palette, time, strength = 1) {
     ctx.save();
     ctx.globalAlpha = 0.45 * strength;
@@ -707,11 +690,10 @@
     ctx.globalAlpha = 0.35 * strength;
 
     const spacing = 26 + rand() * 24;
-    const angle = Math.PI / 3; // 60°
+    const angle = Math.PI / 3;
     const dx = Math.cos(angle) * spacing;
     const dy = Math.sin(angle) * spacing;
 
-    // horizontal-ish lines
     for (let y = -h; y < h * 2; y += spacing) {
       ctx.beginPath();
       ctx.moveTo(-w, y);
@@ -721,7 +703,6 @@
       ctx.stroke();
     }
 
-    // 60°
     for (let x = -w; x < w * 2; x += spacing) {
       ctx.beginPath();
       ctx.moveTo(x, -h);
@@ -733,7 +714,6 @@
       ctx.stroke();
     }
 
-    // 120°
     for (let x = -w; x < w * 2; x += spacing) {
       ctx.beginPath();
       ctx.moveTo(x, -h);
@@ -756,7 +736,6 @@
     const fine = 18 + rand() * 12;
     const majorEvery = 4;
 
-    // fine grid
     ctx.strokeStyle = palette.shades[3];
     ctx.lineWidth = 0.6;
     for (let x = 0; x <= w; x += fine) {
@@ -772,7 +751,6 @@
       ctx.stroke();
     }
 
-    // major grid
     ctx.globalAlpha = 0.45 * strength;
     ctx.strokeStyle = palette.accent;
     ctx.lineWidth = 1.1;
@@ -789,7 +767,6 @@
       ctx.stroke();
     }
 
-    // nodes
     ctx.globalAlpha = 0.55 * strength;
     const nodeCount = Math.floor((w * h) / 120000) + 12;
     for (let i = 0; i < nodeCount; i++) {
@@ -856,7 +833,6 @@
       ctx.fill();
     }
 
-    // soft glow sweep
     ctx.globalAlpha = 0.18 * strength;
     const sweep = ctx.createLinearGradient(0, 0, w, h);
     sweep.addColorStop(0, "rgba(0,0,0,0)");
@@ -956,7 +932,6 @@
     ctx.restore();
   }
 
-  // === Main Renderer ===
   function startRoomBackground({ canvas, seedString } = {}) {
     if (!canvas) throw new Error("RoomBackground.startRoomBackground: missing canvas");
     if (!seedString) throw new Error("RoomBackground.startRoomBackground: missing seedString");
@@ -981,7 +956,6 @@
     let cacheW = 0,
       cacheH = 0;
 
-    // Mouse/parallax state
     let mouseTarget = { x: 0, y: 0 };
     let mousePos = { x: 0, y: 0 };
     let moveHandler = null;
@@ -1026,10 +1000,8 @@
       const pctx = cachePattern.getContext("2d");
       const mctx = cacheMotion.getContext("2d");
 
-      // static base
       fillBase(bctx, w, h, createPRNG(seedBase + "grain"), theme, palette, 0);
 
-      // static patterns (draw once)
       const randA = createPRNG(seedA);
       const randB = createPRNG(seedB);
 
@@ -1039,7 +1011,6 @@
       pA(pctx, w, h, randA, palette, 0, layers[0].strength * 0.7);
       pB(pctx, w, h, randB, palette, 0, layers[1].strength * 0.5);
 
-      // contrast pop baked in
       pctx.save();
       pctx.globalAlpha = theme.baseMode === "darkVignette" ? 0.1 : 0.06;
       pctx.globalCompositeOperation = "overlay";
@@ -1047,7 +1018,6 @@
       pctx.fillRect(0, 0, w, h);
       pctx.restore();
 
-      // motion overlay (single pattern, cached)
       const randM = createPRNG(seedMotion);
       const pM = PATTERN_IMPL[motionKey] || PATTERN_IMPL.interference;
       pM(mctx, w, h, randM, palette, 0, 0.6);
@@ -1062,7 +1032,6 @@
 
     rebuildFromSeed(activeSeedString);
 
-    // Mouse parallax (cheap)
     moveHandler = (e) => {
       const rect = canvas.getBoundingClientRect();
       if (!rect.width || !rect.height) return;
@@ -1101,7 +1070,6 @@
       const { width: w, height: h } = resizeCanvasToDisplaySize(canvas, ctx);
       ensureCache(w, h);
 
-      // Smooth mouse
       mousePos.x = lerp(mousePos.x, mouseTarget.x, PARALLAX_LERP);
       mousePos.y = lerp(mousePos.y, mouseTarget.y, PARALLAX_LERP);
 
@@ -1114,13 +1082,11 @@
       ctx.clearRect(0, 0, w, h);
       ctx.drawImage(cacheBase, 0, 0);
 
-      // pattern layer (parallax)
       ctx.save();
       ctx.translate(parallaxX, parallaxY);
       ctx.drawImage(cachePattern, 0, 0);
       ctx.restore();
 
-      // animated overlay (cheap motion + pulse)
       const pulse = (0.16 + Math.sin(time * 0.0008 + 1.1) * 0.12) * (REDUCED_MOTION ? 0.5 : 1);
       const ox = Math.sin(time * 0.00035) * 12 * MOTION_SCALE + parallaxX * 0.35;
       const oy = Math.cos(time * 0.00031) * 12 * MOTION_SCALE + parallaxY * 0.35;
@@ -1132,7 +1098,6 @@
       ctx.drawImage(cacheMotion, 0, 0);
       ctx.restore();
 
-      // light sweep
       drawLightSweep(ctx, w, h, time);
 
       scheduleNextFrame();

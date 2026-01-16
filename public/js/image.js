@@ -1,19 +1,9 @@
-/**
- * Image processing module
- * Handles resizing and 8-bit grayscale storage for E2E-safe image storage
- */
-
 const ImageProcessor = (() => {
   const MAX_SIZE = 256;
   const IMAGE_LEVELS = 4;
   const GRAPHITE_COLOR = { r: 34, g: 32, b: 28 };
   const GRAPHITE_CSS = `rgb(${GRAPHITE_COLOR.r}, ${GRAPHITE_COLOR.g}, ${GRAPHITE_COLOR.b})`;
   
-  /**
-   * Load an image from file or URL
-   * @param {File|string} source - File object or URL
-   * @returns {Promise<HTMLImageElement>}
-   */
   function loadImage(source) {
     return new Promise((resolve, reject) => {
       const img = new Image();
@@ -28,16 +18,10 @@ const ImageProcessor = (() => {
     });
   }
   
-  /**
-   * Resize image to fit within MAX_SIZE maintaining aspect ratio
-   * @param {HTMLImageElement} img
-   * @returns {{canvas: HTMLCanvasElement, width: number, height: number}}
-   */
   function resizeImage(img) {
     let width = img.width;
     let height = img.height;
     
-    // Scale down if needed
     if (width > MAX_SIZE || height > MAX_SIZE) {
       const scale = Math.min(MAX_SIZE / width, MAX_SIZE / height);
       width = Math.floor(width * scale);
@@ -54,33 +38,19 @@ const ImageProcessor = (() => {
     return { canvas, width, height };
   }
   
-  /**
-   * Convert image to grayscale
-   * @param {ImageData} imageData
-   * @returns {Uint8Array} Grayscale values 0-255
-   */
   function toGrayscale(imageData) {
     const { data, width, height } = imageData;
     const gray = new Uint8Array(width * height);
     
     for (let i = 0; i < gray.length; i++) {
       const idx = i * 4;
-      // Luminosity method
       gray[i] = Math.round(0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2]);
     }
     
     return gray;
   }
   
-  /**
-   * Apply Floyd-Steinberg dithering to grayscale image
-   * @param {Uint8Array} gray - Grayscale values
-   * @param {number} width
-   * @param {number} height
-   * @returns {Uint8Array} 1-bit values (0 or 1)
-   */
   function floydSteinbergDither(gray, width, height) {
-    // Work with float array for error diffusion
     const errors = new Float32Array(gray);
     const output = new Uint8Array(width * height);
     
@@ -93,7 +63,6 @@ const ImageProcessor = (() => {
         
         const error = oldPixel - newPixel;
         
-        // Distribute error to neighbors
         if (x + 1 < width) {
           errors[idx + 1] += error * 7 / 16;
         }
@@ -112,15 +81,7 @@ const ImageProcessor = (() => {
     return output;
   }
   
-  /**
-   * Apply ordered (Bayer) dithering - alternative, faster method
-   * @param {Uint8Array} gray
-   * @param {number} width
-   * @param {number} height
-   * @returns {Uint8Array} 1-bit values
-   */
   function bayerDither(gray, width, height) {
-    // 4x4 Bayer matrix
     const bayer = [
       [0, 8, 2, 10],
       [12, 4, 14, 6],
@@ -141,11 +102,6 @@ const ImageProcessor = (() => {
     return output;
   }
   
-  /**
-   * Pack 1-bit array into bytes
-   * @param {Uint8Array} bits - Array of 0s and 1s
-   * @returns {Uint8Array} Packed bytes
-   */
   function packBits(bits) {
     const byteCount = Math.ceil(bits.length / 8);
     const packed = new Uint8Array(byteCount);
@@ -159,12 +115,6 @@ const ImageProcessor = (() => {
     return packed;
   }
   
-  /**
-   * Unpack bytes into 1-bit array
-   * @param {Uint8Array} packed - Packed bytes
-   * @param {number} bitCount - Total number of bits
-   * @returns {Uint8Array} Array of 0s and 1s
-   */
   function unpackBits(packed, bitCount) {
     const bits = new Uint8Array(bitCount);
     
@@ -199,11 +149,6 @@ const ImageProcessor = (() => {
     return output;
   }
 
-  /**
-   * Process an image file: resize and store 8-bit grayscale data
-   * @param {File} file - Image file
-   * @returns {Promise<{w: number, h: number, data: string}>} Width, height, base64 grayscale data
-   */
   async function processImage(file) {
     const img = await loadImage(file);
     const { canvas, width, height } = resizeImage(img);
@@ -220,11 +165,6 @@ const ImageProcessor = (() => {
     };
   }
   
-  /**
-   * Render 8-bit grayscale image data to canvas
-   * @param {HTMLCanvasElement} canvas
-   * @param {{w: number, h: number, data: string}} imgData
-   */
   function renderToCanvas(canvas, imgData) {
     const { w, h, data } = imgData;
     canvas.width = w;
@@ -249,11 +189,6 @@ const ImageProcessor = (() => {
     ctx.putImageData(imageData, 0, 0);
   }
   
-  /**
-   * Create preview canvas from image data
-   * @param {{w: number, h: number, data: string}} imgData
-   * @returns {HTMLCanvasElement}
-   */
   function createPreviewCanvas(imgData) {
     const canvas = document.createElement('canvas');
     renderToCanvas(canvas, imgData);

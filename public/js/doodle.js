@@ -1,12 +1,7 @@
-/**
- * Doodle editor module
- * 64x64 pixel grid with touch/click drawing
- */
-
 const DoodleEditor = (() => {
   const GRID_SIZE = 64;
-  const DISPLAY_SIZE = 256; // Display canvas size
-  const PIXEL_SIZE = DISPLAY_SIZE / GRID_SIZE; // 4px per grid cell
+  const DISPLAY_SIZE = 256;
+  const PIXEL_SIZE = DISPLAY_SIZE / GRID_SIZE;
   
   let canvas = null;
   let ctx = null;
@@ -16,38 +11,27 @@ const DoodleEditor = (() => {
   let brushSize = 1;
   let isErasing = false;
   
-  /**
-   * Initialize doodle editor on a canvas element
-   * @param {HTMLCanvasElement} canvasElement
-   */
   function init(canvasElement) {
     canvas = canvasElement;
     ctx = canvas.getContext('2d');
     
-    // Ensure canvas is correct size
     canvas.width = DISPLAY_SIZE;
     canvas.height = DISPLAY_SIZE;
     
-    // Initialize empty grid
     clear();
     resetTools();
     
-    // Event listeners
     canvas.addEventListener('mousedown', handleStart);
     canvas.addEventListener('mousemove', handleMove);
     canvas.addEventListener('mouseup', handleEnd);
     canvas.addEventListener('mouseleave', handleLeave);
     window.addEventListener('mouseup', handleEnd);
     
-    // Touch events
     canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
     canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
     canvas.addEventListener('touchend', handleEnd);
   }
   
-  /**
-   * Clear the grid
-   */
   function clear() {
     grid = new Uint8Array(GRID_SIZE * GRID_SIZE);
     render();
@@ -58,12 +42,6 @@ const DoodleEditor = (() => {
     isErasing = false;
   }
   
-  /**
-   * Get grid coordinates from canvas pixel coordinates
-   * @param {number} x - Canvas X
-   * @param {number} y - Canvas Y
-   * @returns {{gx: number, gy: number}}
-   */
   function getGridCoords(x, y) {
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
@@ -81,11 +59,6 @@ const DoodleEditor = (() => {
     };
   }
   
-  /**
-   * Toggle a pixel and render
-   * @param {number} gx - Grid X
-   * @param {number} gy - Grid Y
-   */
   function togglePixel(gx, gy) {
     const idx = gy * GRID_SIZE + gx;
     grid[idx] = grid[idx] ? 0 : 1;
@@ -130,12 +103,6 @@ const DoodleEditor = (() => {
     });
   }
   
-  /**
-   * Set a pixel (draw mode)
-   * @param {number} gx
-   * @param {number} gy
-   * @param {number} value - 0 or 1
-   */
   function setPixel(gx, gy, value) {
     const idx = gy * GRID_SIZE + gx;
     if (grid[idx] !== value) {
@@ -144,9 +111,6 @@ const DoodleEditor = (() => {
     }
   }
   
-  /**
-   * Render entire grid
-   */
   function render() {
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, DISPLAY_SIZE, DISPLAY_SIZE);
@@ -160,7 +124,6 @@ const DoodleEditor = (() => {
       }
     }
     
-    // Draw grid lines (subtle)
     ctx.strokeStyle = 'rgba(200, 200, 200, 0.3)';
     ctx.lineWidth = 0.5;
     for (let i = 0; i <= GRID_SIZE; i += 8) {
@@ -175,18 +138,12 @@ const DoodleEditor = (() => {
     }
   }
   
-  /**
-   * Render a single pixel (for performance during drawing)
-   * @param {number} gx
-   * @param {number} gy
-   */
   function renderPixel(gx, gy) {
     const value = grid[gy * GRID_SIZE + gx];
     ctx.fillStyle = value ? ImageProcessor.GRAPHITE_CSS : '#ffffff';
     ctx.fillRect(gx * PIXEL_SIZE, gy * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
   }
   
-  // Event handlers
   function handleStart(e) {
     isDrawing = true;
     const { gx, gy } = getGridCoords(e.clientX, e.clientY);
@@ -206,7 +163,6 @@ const DoodleEditor = (() => {
     }
     
     if (gx !== lastCell.gx || gy !== lastCell.gy) {
-      // Draw line from last cell to current cell
       drawLine(lastCell.gx, lastCell.gy, gx, gy, getDrawValue());
       lastCell = { gx, gy };
     }
@@ -278,10 +234,6 @@ const DoodleEditor = (() => {
     }
   }
   
-  /**
-   * Get doodle data as packed format
-   * @returns {{w: number, h: number, data: string}}
-   */
   function getData() {
     const packed = ImageProcessor.packBits(grid);
     return {
@@ -291,10 +243,6 @@ const DoodleEditor = (() => {
     };
   }
   
-  /**
-   * Load doodle data from packed format
-   * @param {{w: number, h: number, data: string}} data
-   */
   function setData(data) {
     if (data.w !== GRID_SIZE || data.h !== GRID_SIZE) {
       console.warn('Doodle size mismatch');
@@ -306,19 +254,10 @@ const DoodleEditor = (() => {
     render();
   }
   
-  /**
-   * Check if doodle is empty
-   * @returns {boolean}
-   */
   function isEmpty() {
     return !grid.some(bit => bit === 1);
   }
   
-  /**
-   * Create a preview canvas from doodle data
-   * @param {{w: number, h: number, data: string}} doodleData
-   * @returns {HTMLCanvasElement}
-   */
   function createPreviewCanvas(doodleData) {
     const canvas = document.createElement('canvas');
     canvas.width = doodleData.w;
