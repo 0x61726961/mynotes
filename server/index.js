@@ -43,6 +43,9 @@ app.use(express.json({ limit: '500kb' }));
 // Serve static files from public directory
 app.use(express.static(path.join(__dirname, '../public')));
 
+// Serve shared assets (e.g., login hint images)
+app.use('/assets', express.static(path.join(__dirname, '../assets')));
+
 // Validate board_id format (hex string, 64 chars for SHA-256)
 function isValidBoardId(id) {
   return typeof id === 'string' && /^[a-f0-9]{64}$/i.test(id);

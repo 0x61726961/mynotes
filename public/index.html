@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#8b7355">
-  <title>MyNotes - Private Sticky Board</title>
+  <title></title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -13,56 +13,43 @@
   <!-- Screen 1: Passphrase Entry -->
   <div id="login-screen" class="screen active">
     <div class="login-container">
-      <h1 class="app-title">📌 MyNotes</h1>
-      <p class="app-subtitle">End-to-end encrypted sticky boards</p>
+      <h1 class="app-title" id="app-title"></h1>
+      <p class="app-subtitle" id="app-subtitle"></p>
       
       <form id="passphrase-form">
         <div class="input-group">
-          <label for="passphrase">Enter your board passphrase</label>
           <input 
             type="text" 
             id="passphrase" 
             name="passphrase" 
-            placeholder="public"
+            placeholder=""
             autocomplete="off"
+            aria-label=""
           >
         </div>
-        <div class="remember-room">
-          <input type="checkbox" id="remember-room" name="remember-room">
-          <label for="remember-room">Remember room name</label>
+        <div class="login-actions">
+          <button type="submit" id="open-board-btn" class="btn btn-primary"></button>
+          <label class="remember-room remember-room-inline" for="remember-room">
+            <input type="checkbox" id="remember-room" name="remember-room">
+            <span id="remember-room-label"></span>
+          </label>
         </div>
-        <button type="submit" id="open-board-btn" class="btn btn-primary">
-          Open Board
-        </button>
       </form>
       
-      <p class="hint">
-        Share this passphrase with others to collaborate.<br>
-        Your notes are encrypted locally — we never see them.
-      </p>
+      <p class="hint" id="passphrase-hint"></p>
     </div>
   </div>
 
   <!-- Screen 2: Corkboard -->
   <div id="board-screen" class="screen">
     <div id="room-label" class="room-label is-hidden" aria-live="polite"></div>
-    <button id="logout-btn" class="fab-btn fab-top-right fab-exit" title="Leave board" aria-label="Leave board">
-      Exit
-    </button>
+    <button id="logout-btn" class="fab-btn fab-top-right fab-exit" title="" aria-label=""></button>
     <div id="add-fab-container" class="fab-container">
-      <button id="add-fab" class="fab-btn fab-primary fab-icon fab-icon-add" title="Add note" aria-label="Add note" aria-expanded="false">
-        Add
-      </button>
+      <button id="add-fab" class="fab-btn fab-primary fab-icon fab-icon-add" title="" aria-label="" aria-expanded="false"></button>
       <div id="add-fab-menu" class="fab-menu" aria-hidden="true">
-        <button id="add-text-btn" class="fab-option fab-icon fab-icon-text" title="Add text note" aria-label="Add text note">
-          Text
-        </button>
-        <button id="add-image-btn" class="fab-option fab-icon fab-icon-image" title="Add image note" aria-label="Add image note">
-          Image
-        </button>
-        <button id="add-doodle-btn" class="fab-option fab-icon fab-icon-doodle" title="Add doodle" aria-label="Add doodle">
-          Doodle
-        </button>
+        <button id="add-text-btn" class="fab-option fab-icon fab-icon-text" title="" aria-label=""></button>
+        <button id="add-image-btn" class="fab-option fab-icon fab-icon-image" title="" aria-label=""></button>
+        <button id="add-doodle-btn" class="fab-option fab-icon fab-icon-doodle" title="" aria-label=""></button>
       </div>
     </div>
 
@@ -77,10 +64,10 @@
   <!-- Text Note Editor Modal -->
   <div id="text-modal" class="modal">
     <div class="modal-content note-editor">
-      <h3>Add Note</h3>
-      <textarea id="note-text" placeholder="Write your note..."></textarea>
+      <h3 id="text-modal-title"></h3>
+      <textarea id="note-text" placeholder=""></textarea>
       <div class="color-picker">
-        <label>Color:</label>
+        <label id="text-color-label"></label>
         <div class="color-options">
           <button type="button" class="color-btn" data-color="yellow" style="background: #fff740;"></button>
           <button type="button" class="color-btn" data-color="pink" style="background: #ff7eb9;"></button>
@@ -91,9 +78,9 @@
         </div>
       </div>
       <div class="modal-actions">
-        <button id="delete-text-btn" class="btn btn-secondary">Delete</button>
-        <button id="cancel-text-btn" class="btn btn-secondary">Cancel</button>
-        <button id="save-text-btn" class="btn btn-primary">Save</button>
+        <button id="delete-text-btn" class="btn btn-secondary"></button>
+        <button id="cancel-text-btn" class="btn btn-secondary"></button>
+        <button id="save-text-btn" class="btn btn-primary"></button>
       </div>
     </div>
   </div>
@@ -101,14 +88,14 @@
   <!-- Image Upload Modal -->
   <div id="image-modal" class="modal">
     <div class="modal-content note-editor">
-      <h3>Add Image</h3>
+      <h3 id="image-modal-title"></h3>
       <div id="image-drop-zone" class="drop-zone">
-        <p>Drop image here or click to select</p>
+        <p id="image-drop-text"></p>
         <input type="file" id="image-input" accept="image/*" hidden>
       </div>
       <canvas id="image-preview" class="image-preview" width="256" height="256"></canvas>
       <div class="color-picker">
-        <label>Note Color:</label>
+        <label id="image-color-label"></label>
         <div class="color-options">
           <button type="button" class="color-btn" data-color="yellow" style="background: #fff740;"></button>
           <button type="button" class="color-btn" data-color="pink" style="background: #ff7eb9;"></button>
@@ -119,9 +106,9 @@
         </div>
       </div>
       <div class="modal-actions">
-        <button id="delete-image-btn" class="btn btn-secondary">Delete</button>
-        <button id="cancel-image-btn" class="btn btn-secondary">Cancel</button>
-        <button id="save-image-btn" class="btn btn-primary" disabled>Save</button>
+        <button id="delete-image-btn" class="btn btn-secondary"></button>
+        <button id="cancel-image-btn" class="btn btn-secondary"></button>
+        <button id="save-image-btn" class="btn btn-primary" disabled></button>
       </div>
     </div>
   </div>
@@ -129,21 +116,21 @@
   <!-- Doodle Editor Modal -->
   <div id="doodle-modal" class="modal">
     <div class="modal-content note-editor">
-      <h3>Draw Doodle</h3>
+      <h3 id="doodle-modal-title"></h3>
       <canvas id="doodle-canvas" class="doodle-canvas" width="256" height="256"></canvas>
       <div class="doodle-tools">
         <div class="doodle-tool-group">
-          <button type="button" class="btn btn-small doodle-tool-btn" data-brush="1" aria-label="Pencil">•</button>
-          <button type="button" class="btn btn-small doodle-tool-btn" data-brush="2" aria-label="Pen">◆</button>
-          <button type="button" class="btn btn-small doodle-tool-btn" data-brush="3" aria-label="Marker">■</button>
+          <button type="button" class="btn btn-small doodle-tool-btn" data-brush="1" aria-label="">•</button>
+          <button type="button" class="btn btn-small doodle-tool-btn" data-brush="2" aria-label="">◆</button>
+          <button type="button" class="btn btn-small doodle-tool-btn" data-brush="3" aria-label="">■</button>
         </div>
         <div class="doodle-tool-group">
-          <button type="button" id="doodle-eraser" class="btn btn-small">Eraser</button>
-          <button type="button" id="doodle-clear" class="btn btn-small">Clear</button>
+          <button type="button" id="doodle-eraser" class="btn btn-small"></button>
+          <button type="button" id="doodle-clear" class="btn btn-small"></button>
         </div>
       </div>
       <div class="color-picker">
-        <label>Note Color:</label>
+        <label id="doodle-color-label"></label>
         <div class="color-options">
           <button type="button" class="color-btn" data-color="yellow" style="background: #fff740;"></button>
           <button type="button" class="color-btn" data-color="pink" style="background: #ff7eb9;"></button>
@@ -154,9 +141,9 @@
         </div>
       </div>
       <div class="modal-actions">
-        <button id="delete-doodle-btn" class="btn btn-secondary">Delete</button>
-        <button id="cancel-doodle-btn" class="btn btn-secondary">Cancel</button>
-        <button id="save-doodle-btn" class="btn btn-primary">Save</button>
+        <button id="delete-doodle-btn" class="btn btn-secondary"></button>
+        <button id="cancel-doodle-btn" class="btn btn-secondary"></button>
+        <button id="save-doodle-btn" class="btn btn-primary"></button>
       </div>
     </div>
   </div>
@@ -164,11 +151,11 @@
   <!-- Delete Confirmation Modal -->
   <div id="delete-modal" class="modal">
     <div class="modal-content confirm-modal">
-      <h3>Delete this note?</h3>
-      <p class="confirm-text">This can’t be undone.</p>
+      <h3 id="delete-modal-title"></h3>
+      <p class="confirm-text" id="delete-modal-text"></p>
       <div class="modal-actions">
-        <button id="cancel-delete-btn" class="btn btn-secondary">Cancel</button>
-        <button id="confirm-delete-btn" class="btn btn-confirm">Yes, delete</button>
+        <button id="cancel-delete-btn" class="btn btn-secondary"></button>
+        <button id="confirm-delete-btn" class="btn btn-confirm"></button>
       </div>
     </div>
   </div>
@@ -176,7 +163,7 @@
   <!-- Loading Overlay -->
   <div id="loading-overlay" class="loading-overlay">
     <div class="spinner"></div>
-    <p id="loading-text">Deriving encryption key...</p>
+    <p id="loading-text"></p>
   </div>
 
   <!-- Toasts -->
@@ -189,6 +176,7 @@
   <script src="js/notes.js"></script>
   <script src="js/board.js"></script>
   <script src="js/room-bg.js"></script>
+  <script src="js/strings.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

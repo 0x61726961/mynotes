@@ -113,7 +113,7 @@ body.room-bg-active #room-bg {
 
 .app-title {
   font-size: 2rem;
-  color: var(--cork-dark);
+  color: #3a3a3a;
   margin-bottom: 0.35rem;
 }
 
@@ -195,6 +195,18 @@ body.room-bg-active #room-bg {
   width: 100%;
 }
 
+.login-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.login-actions .btn-primary {
+  width: auto;
+  flex: 1;
+}
+
 .btn-primary:hover {
   background: #1f7a47;
 }
@@ -231,6 +243,15 @@ body.room-bg-active #room-bg {
   color: #555;
 }
 
+.remember-room-inline {
+  margin-bottom: 0;
+  white-space: nowrap;
+}
+
+.login-actions .remember-room {
+  margin-bottom: 0;
+}
+
 .remember-room input {
   width: 16px;
   height: 16px;
@@ -239,7 +260,7 @@ body.room-bg-active #room-bg {
 .hint {
   margin-top: 1.5rem;
   font-size: 0.82rem;
-  color: #7a7a7a;
+  color: #3a3a3a;
   line-height: 1.5;
 }
 
@@ -587,7 +608,7 @@ body.room-bg-active #room-bg {
 }
 
 .confirm-modal {
-  width: min(320px, 90vw);
+  width: min(420px, 92vw);
   text-align: center;
 }
 

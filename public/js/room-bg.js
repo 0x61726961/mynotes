@@ -963,7 +963,7 @@
 
     const ctx = canvas.getContext("2d");
 
-    const SEED_SALT = "Jenni";
+    const SEED_SALT = "get out of my head charles";
     let activeSeedString = String(seedString) + "|" + SEED_SALT;
 
     let theme = null;

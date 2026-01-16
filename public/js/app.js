@@ -34,13 +34,114 @@ const App = (() => {
   let refreshInterval = null;
   let isRefreshing = false;
   let lastLocalChangeAt = 0;
+  const STRINGS = window.AppStrings || {};
   const REFRESH_INTERVAL_MS = 5000;
-  const DEFAULT_ROOM = 'public';
+  const DEFAULT_ROOM = resolveString(STRINGS.login?.passphrasePlaceholder, 'public');
   const REMEMBER_ROOM_KEY = 'mynotes.rememberRoom';
   const LAST_ROOM_KEY = 'mynotes.lastRoom';
   const TOAST_DURATION_MS = 2800;
   const TOAST_ANIMATION_MS = 200;
   
+  function resolveString(value, fallback = '') {
+    return typeof value === 'string' ? value : fallback;
+  }
+
+  function setTextById(id, text) {
+    const el = document.getElementById(id);
+    if (el && typeof text === 'string') {
+      el.textContent = text;
+    }
+  }
+
+  function setHtmlById(id, html) {
+    const el = document.getElementById(id);
+    if (el && typeof html === 'string') {
+      el.innerHTML = html;
+    }
+  }
+
+  function setAttrById(id, attr, value) {
+    const el = document.getElementById(id);
+    if (el && typeof value === 'string') {
+      el.setAttribute(attr, value);
+    }
+  }
+
+  function setAttr(el, attr, value) {
+    if (el && typeof value === 'string') {
+      el.setAttribute(attr, value);
+    }
+  }
+
+  function applyStrings() {
+    const { meta, login, board, modals, loading } = STRINGS;
+
+    if (meta?.title) {
+      document.title = meta.title;
+    }
+
+    setTextById('app-title', login?.title);
+    setAttrById('passphrase', 'placeholder', login?.passphrasePlaceholder);
+    setAttrById(
+      'passphrase',
+      'aria-label',
+      resolveString(login?.passphrasePlaceholder, 'Room passphrase')
+    );
+    setTextById('remember-room-label', login?.rememberRoom);
+    setTextById('open-board-btn', login?.openBoard);
+    setHtmlById('passphrase-hint', login?.hintHtml);
+
+    setTextById('logout-btn', board?.leaveBoardText);
+    setAttrById('logout-btn', 'title', board?.leaveBoardTitle);
+    setAttrById('logout-btn', 'aria-label', board?.leaveBoardLabel);
+
+    setTextById('add-fab', board?.addButtonText);
+    setAttrById('add-fab', 'title', board?.addButtonTitle);
+    setAttrById('add-fab', 'aria-label', board?.addButtonLabel);
+
+    setTextById('add-text-btn', board?.addTextText);
+    setAttrById('add-text-btn', 'title', board?.addTextTitle);
+    setAttrById('add-text-btn', 'aria-label', board?.addTextLabel);
+
+    setTextById('add-image-btn', board?.addImageText);
+    setAttrById('add-image-btn', 'title', board?.addImageTitle);
+    setAttrById('add-image-btn', 'aria-label', board?.addImageLabel);
+
+    setTextById('add-doodle-btn', board?.addDoodleText);
+    setAttrById('add-doodle-btn', 'title', board?.addDoodleTitle);
+    setAttrById('add-doodle-btn', 'aria-label', board?.addDoodleLabel);
+
+    setTextById('text-modal-title', modals?.text?.title);
+    setAttrById('note-text', 'placeholder', modals?.text?.placeholder);
+    setTextById('delete-text-btn', modals?.text?.delete);
+    setTextById('cancel-text-btn', modals?.text?.cancel);
+    setTextById('save-text-btn', modals?.text?.save);
+
+    setTextById('image-modal-title', modals?.image?.title);
+    setTextById('image-drop-text', modals?.image?.dropZone);
+    setTextById('delete-image-btn', modals?.image?.delete);
+    setTextById('cancel-image-btn', modals?.image?.cancel);
+    setTextById('save-image-btn', modals?.image?.save);
+
+    setTextById('doodle-modal-title', modals?.doodle?.title);
+    setTextById('delete-doodle-btn', modals?.doodle?.delete);
+    setTextById('cancel-doodle-btn', modals?.doodle?.cancel);
+    setTextById('save-doodle-btn', modals?.doodle?.save);
+    setTextById('doodle-eraser', modals?.doodle?.eraser);
+    setTextById('doodle-clear', modals?.doodle?.clear);
+
+    const brushLabels = modals?.doodle?.brushLabels || {};
+    setAttr(document.querySelector('.doodle-tool-btn[data-brush="1"]'), 'aria-label', brushLabels.pencil);
+    setAttr(document.querySelector('.doodle-tool-btn[data-brush="2"]'), 'aria-label', brushLabels.pen);
+    setAttr(document.querySelector('.doodle-tool-btn[data-brush="3"]'), 'aria-label', brushLabels.marker);
+
+    setTextById('delete-modal-title', modals?.deleteConfirm?.title);
+    setTextById('cancel-delete-btn', modals?.deleteConfirm?.cancel);
+    setTextById('confirm-delete-btn', modals?.deleteConfirm?.confirm);
+
+    setTextById('loading-text', loading?.derivingKey);
+  }
+
   /**
    * Initialize the application
    */
@@ -69,6 +170,8 @@ const App = (() => {
     roomLabel = document.getElementById('room-label');
     backgroundCanvas = document.getElementById('room-bg');
     
+    applyStrings();
+
     // Setup event listeners
     setupLoginEvents();
     applyRememberedRoom();
@@ -288,7 +391,7 @@ const App = (() => {
     const passphrase = getPassphraseValue();
     persistRememberedRoom(passphrase);
     
-    showLoading('Deriving encryption key...');
+    showLoading(resolveString(STRINGS.loading?.derivingKey, 'Deriving encryption key...'));
     
     try {
       // Derive board ID and encryption key
@@ -298,7 +401,7 @@ const App = (() => {
       // Initialize notes module
       Notes.init(currentBoardId, encryptionKey);
       
-      showLoading('Loading notes...');
+      showLoading(resolveString(STRINGS.loading?.loadingNotes, 'Loading notes...'));
       
       // Load notes from server
       const notes = await Notes.loadNotes();
@@ -330,7 +433,7 @@ const App = (() => {
     } catch (err) {
       console.error('Failed to open board:', err);
       hideLoading();
-      showToast('Failed to open board. Please try again.');
+      showToast(resolveString(STRINGS.toasts?.openBoardFail, 'Failed to open board. Please try again.'));
     }
   }
   
@@ -433,7 +536,7 @@ const App = (() => {
       return note;
     } catch (err) {
       console.error('Failed to create draft note:', err);
-      showToast('Failed to create note');
+      showToast(resolveString(STRINGS.toasts?.createNoteFail, 'Failed to create note'));
       return null;
     }
   }
@@ -486,10 +589,10 @@ const App = (() => {
     try {
       markLocalChange();
       await Notes.deleteNote(noteId);
-      showToast('Note deleted', { variant: 'info' });
+      showToast(resolveString(STRINGS.toasts?.noteDeleted, 'Note deleted'), { variant: 'info' });
     } catch (err) {
       console.error('Failed to delete note:', err);
-      showToast('Failed to delete note');
+      showToast(resolveString(STRINGS.toasts?.deleteNoteFail, 'Failed to delete note'));
     } finally {
       Board.removeNote(noteId);
       if (pendingDraftNoteId === noteId) {
@@ -573,7 +676,7 @@ const App = (() => {
       { x, y, rot: getRotationForNote(noteId) },
       (err) => {
         console.error('Failed to save note position:', err);
-        showToast('Failed to save note position');
+        showToast(resolveString(STRINGS.toasts?.saveNotePositionFail, 'Failed to save note position'));
       }
     );
   }
@@ -587,7 +690,7 @@ const App = (() => {
       { rot: rotation },
       (err) => {
         console.error('Failed to save note rotation:', err);
-        showToast('Failed to save note rotation');
+        showToast(resolveString(STRINGS.toasts?.saveNoteRotationFail, 'Failed to save note rotation'));
       }
     );
   }
@@ -656,7 +759,7 @@ const App = (() => {
   async function saveTextNote() {
     const text = document.getElementById('note-text').value.trim();
     if (!text) {
-      showToast('Please enter some text', { variant: 'info' });
+      showToast(resolveString(STRINGS.toasts?.enterText, 'Please enter some text'), { variant: 'info' });
       return;
     }
 
@@ -692,7 +795,7 @@ const App = (() => {
       closeTextModal();
     } catch (err) {
       console.error('Failed to save note:', err);
-      showToast('Failed to save note');
+      showToast(resolveString(STRINGS.toasts?.saveNoteFail, 'Failed to save note'));
     }
   }
   
@@ -743,7 +846,7 @@ const App = (() => {
    */
   async function processImageFile(file) {
     try {
-      showLoading('Processing image...');
+      showLoading(resolveString(STRINGS.loading?.processingImage, 'Processing image...'));
       imageData = await ImageProcessor.processImage(file);
       
       // Show preview
@@ -756,7 +859,7 @@ const App = (() => {
     } catch (err) {
       console.error('Failed to process image:', err);
       hideLoading();
-      showToast('Failed to process image');
+      showToast(resolveString(STRINGS.toasts?.processImageFail, 'Failed to process image'));
     }
   }
   
@@ -794,7 +897,7 @@ const App = (() => {
       closeImageModal();
     } catch (err) {
       console.error('Failed to save image note:', err);
-      showToast('Failed to save image note');
+      showToast(resolveString(STRINGS.toasts?.saveImageFail, 'Failed to save image note'));
     }
   }
   
@@ -837,7 +940,7 @@ const App = (() => {
    */
   async function saveDoodleNote() {
     if (DoodleEditor.isEmpty()) {
-      showToast('Please draw something first', { variant: 'info' });
+      showToast(resolveString(STRINGS.toasts?.drawSomething, 'Please draw something first'), { variant: 'info' });
       return;
     }
 
@@ -870,7 +973,7 @@ const App = (() => {
       closeDoodleModal();
     } catch (err) {
       console.error('Failed to save doodle note:', err);
-      showToast('Failed to save doodle note');
+      showToast(resolveString(STRINGS.toasts?.saveDoodleFail, 'Failed to save doodle note'));
     }
   }
   
@@ -970,7 +1073,7 @@ const App = (() => {
 
   function setRoomLabel(passphrase) {
     if (!roomLabel) return;
-    const label = passphrase ? `${passphrase}` : '[UNKNOWN AREA]';
+    const label = passphrase ? `${passphrase}` : resolveString(STRINGS.board?.roomUnknown, '[UNKNOWN AREA]');
     roomLabel.textContent = label;
     roomLabel.setAttribute('title', label);
     roomLabel.classList.toggle('is-hidden', !label);
