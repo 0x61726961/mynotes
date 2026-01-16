@@ -481,6 +481,22 @@ const App = (() => {
       refreshInterval = null;
     }
   }
+
+  function isAnyModalOpen() {
+    return [textModal, imageModal, doodleModal, deleteModal].some(
+      modal => modal?.classList.contains('active')
+    );
+  }
+
+  function pauseNotesRefreshForModal() {
+    stopNotesRefresh();
+  }
+
+  function resumeNotesRefreshIfReady() {
+    if (!currentBoardId || !boardScreen?.classList.contains('active')) return;
+    if (isAnyModalOpen()) return;
+    startNotesRefresh();
+  }
   
   function markLocalChange() {
     lastLocalChangeAt = Date.now();
@@ -571,12 +587,14 @@ const App = (() => {
     if (!deleteModal) return;
     pendingDeleteNoteId = noteId;
     deleteModal.classList.add('active');
+    pauseNotesRefreshForModal();
   }
 
   function closeDeleteModal() {
     if (!deleteModal) return;
     deleteModal.classList.remove('active');
     pendingDeleteNoteId = null;
+    resumeNotesRefreshIfReady();
   }
 
   async function confirmDeleteNote() {
@@ -741,6 +759,7 @@ const App = (() => {
     }
     
     textModal.classList.add('active');
+    pauseNotesRefreshForModal();
     textarea.focus();
   }
   
@@ -751,6 +770,7 @@ const App = (() => {
     textModal.classList.remove('active');
     currentEditNoteId = null;
     discardDraftNote();
+    resumeNotesRefreshIfReady();
   }
   
   /**
@@ -834,6 +854,7 @@ const App = (() => {
     }
 
     imageModal.classList.add('active');
+    pauseNotesRefreshForModal();
   }
   
   /**
@@ -844,6 +865,7 @@ const App = (() => {
     imageData = null;
     currentEditNoteId = null;
     discardDraftNote();
+    resumeNotesRefreshIfReady();
   }
   
   /**
@@ -934,6 +956,7 @@ const App = (() => {
     }
 
     doodleModal.classList.add('active');
+    pauseNotesRefreshForModal();
   }
   
   /**
@@ -943,6 +966,7 @@ const App = (() => {
     doodleModal.classList.remove('active');
     currentEditNoteId = null;
     discardDraftNote();
+    resumeNotesRefreshIfReady();
   }
 
   /**
@@ -958,6 +982,16 @@ const App = (() => {
     
     try {
       const doodleData = DoodleEditor.getData();
+
+      if (currentEditNoteId && !Notes.getNote(currentEditNoteId)) {
+        console.warn('Missing doodle draft note in cache; recreating note.');
+        if (pendingDraftNoteId === currentEditNoteId) {
+          pendingDraftNoteId = null;
+        }
+        Board.removeNote(currentEditNoteId);
+        currentEditNoteId = null;
+      }
+
       if (currentEditNoteId) {
         const updates = {
           doodle: doodleData,
