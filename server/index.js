@@ -6,7 +6,7 @@ const rateLimit = require('express-rate-limit');
 const db = require('./db');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 6677;
 const MAX_NOTES_PER_BOARD = 300;
 const MAX_DB_BYTES = 2000000000;
 const MAX_PAYLOAD_BYTES = 200000;
@@ -54,11 +54,13 @@ const createLimiter = createApiLimiter({ max: 20 });
 const deleteLimiter = createApiLimiter({ max: 20 });
 
 app.use(express.json({ limit: '200kb' }));
-app.use('/api/', globalLimiter);
+app.use(['/api', '/mynotes/api'], globalLimiter);
 
 app.use(express.static(path.join(__dirname, '../public')));
 
 app.use('/assets', express.static(path.join(__dirname, '../assets')));
+
+const apiRouter = express.Router();
 
 function isValidBoardId(id) {
   return typeof id === 'string' && /^[a-f0-9]{64}$/i.test(id);
@@ -105,7 +107,7 @@ function cleanupDeletedNotes() {
   }
 }
 
-app.post('/api/notes/list', listLimiter, (req, res) => {
+apiRouter.post('/notes/list', listLimiter, (req, res) => {
   try {
     const { board_id, limit, offset } = req.body;
     
@@ -135,7 +137,7 @@ app.post('/api/notes/list', listLimiter, (req, res) => {
   }
 });
 
-app.post('/api/notes/create', createLimiter, (req, res) => {
+apiRouter.post('/notes/create', createLimiter, (req, res) => {
   try {
     const { board_id, payload } = req.body;
     
@@ -168,7 +170,7 @@ app.post('/api/notes/create', createLimiter, (req, res) => {
   }
 });
 
-app.post('/api/notes/update', updateLimiter, (req, res) => {
+apiRouter.post('/notes/update', updateLimiter, (req, res) => {
   try {
     const { board_id, id, payload, deleted } = req.body;
     
@@ -197,7 +199,7 @@ app.post('/api/notes/update', updateLimiter, (req, res) => {
   }
 });
 
-app.post('/api/notes/delete', deleteLimiter, (req, res) => {
+apiRouter.post('/notes/delete', deleteLimiter, (req, res) => {
   try {
     const { board_id, id } = req.body;
     
@@ -221,6 +223,8 @@ app.post('/api/notes/delete', deleteLimiter, (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 });
+
+app.use(['/api', '/mynotes/api'], apiRouter);
 
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));

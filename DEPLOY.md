@@ -15,7 +15,7 @@ npm install
 # Start server
 npm start
 
-# Server runs on http://localhost:3000
+# Server runs on http://localhost:6677
 ```
 
 ## Production Deployment
@@ -37,7 +37,7 @@ mkdir -p data
 
 ```bash
 # Create .env file
-PORT=3000
+PORT=6677
 DB_PATH=/var/www/mynotes/data/mynotes.db
 TRUST_PROXY=true # set true when running behind nginx/caddy
 ```
@@ -73,7 +73,16 @@ sudo nano /etc/caddy/Caddyfile
 **Caddyfile:**
 ```
 mynotes.yourdomain.com {
-    reverse_proxy localhost:3000
+    @mynotes path /mynotes
+    redir @mynotes /mynotes/
+
+    handle_path /mynotes/api/* {
+        reverse_proxy localhost:6677
+    }
+
+    handle_path /mynotes/* {
+        reverse_proxy localhost:6677
+    }
     
     # Security headers (optional, app already sets most via helmet)
     header {
@@ -102,8 +111,24 @@ server {
     listen 80;
     server_name mynotes.yourdomain.com;
 
-    location / {
-        proxy_pass http://localhost:3000;
+    location = /mynotes {
+        return 301 /mynotes/;
+    }
+
+    location /mynotes/api/ {
+        proxy_pass http://localhost:6677/mynotes/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    location /mynotes/ {
+        proxy_pass http://localhost:6677/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -126,6 +151,9 @@ sudo systemctl reload nginx
 sudo certbot --nginx -d mynotes.yourdomain.com
 ```
 
+If you host at `/mynotes/`, the API routes are served from `/mynotes/api/`.
+```
+
 ### 6. Firewall
 
 ```bash
@@ -134,7 +162,7 @@ sudo ufw allow 80/tcp
 sudo ufw allow 443/tcp
 
 # Block direct access to the Node server (keep it behind your proxy)
-sudo ufw deny 3000/tcp
+sudo ufw deny 6677/tcp
 ```
 
 ## Security Checklist

@@ -50,7 +50,7 @@ npm install
 # Start server
 npm start
 
-# Open http://localhost:3000
+# Open http://localhost:6677
 ```
 
 ## Project Structure
@@ -89,6 +89,8 @@ All endpoints accept JSON and require a valid `board_id` (64-char hex string).
 | POST | `/api/notes/create` | Create a new note |
 | POST | `/api/notes/update` | Update a note |
 | POST | `/api/notes/delete` | Soft-delete a note |
+
+If you host the app under a subpath (e.g. `/mynotes/`), the API endpoints are available under `/mynotes/api/notes/*`.
 
 ## Deployment
 

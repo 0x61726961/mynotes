@@ -6,6 +6,10 @@ const Notes = (() => {
   const COLORS = ['yellow', 'pink', 'blue', 'green', 'orange', 'lavender'];
   const COLOR_VARIANTS = ['', 'v1', 'v2'];
   const PAGE_LIMIT = 100;
+  const API_BASE = (() => {
+    const path = window.location.pathname || '';
+    return path.startsWith('/mynotes') ? '/mynotes/api' : '/api';
+  })();
   
   let notesCache = new Map();
   let encryptionKey = null;
@@ -112,7 +116,7 @@ const Notes = (() => {
   }
   
   async function fetchNotesPage(offset = 0) {
-    const response = await fetch('/api/notes/list', {
+    const response = await fetch(`${API_BASE}/notes/list`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ board_id: boardId, limit: PAGE_LIMIT, offset })
@@ -191,7 +195,7 @@ const Notes = (() => {
     const payload = createPayload(type, data, color, position, options);
     const encryptedPayload = await Crypto.encryptPayload(encryptionKey, payload);
     
-    const response = await fetch('/api/notes/create', {
+    const response = await fetch(`${API_BASE}/notes/create`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -230,7 +234,7 @@ const Notes = (() => {
     
     const encryptedPayload = await Crypto.encryptPayload(encryptionKey, note.payload);
     
-    const response = await fetch('/api/notes/update', {
+    const response = await fetch(`${API_BASE}/notes/update`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -246,7 +250,7 @@ const Notes = (() => {
   }
   
   async function deleteNote(id) {
-    const response = await fetch('/api/notes/delete', {
+    const response = await fetch(`${API_BASE}/notes/delete`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
