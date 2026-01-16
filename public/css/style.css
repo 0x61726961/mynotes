@@ -629,6 +629,7 @@ body.room-bg-active #room-bg {
 .note-editor h3 {
   margin-bottom: 1rem;
   color: #333;
+  text-align: center;
 }
 
 .note-editor textarea {
@@ -706,6 +707,22 @@ body.room-bg-active #room-bg {
   background: #fff;
   transition: border-color 0.2s, background 0.2s;
   margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.drop-zone.has-image {
+  padding: 1rem;
+}
+
+.drop-zone.has-image p {
+  display: none;
+}
+
+.drop-zone.has-image .image-preview {
+  display: block;
 }
 
 .drop-zone:hover,
@@ -723,7 +740,6 @@ body.room-bg-active #room-bg {
   display: none;
   width: 100%;
   max-width: 256px;
-  margin: 0 auto 1rem;
   border: 2px solid var(--ink);
   border-radius: 6px;
   image-rendering: pixelated;

@@ -7,11 +7,11 @@ little notes app I wanted to make for myself. the rest of this shit is vibecoded
 - **End-to-End Encryption**: Your notes are encrypted in your browser before being sent to the server. The server only stores ciphertext.
 - **Passphrase-Based Access**: Access boards by passphrase. Share the passphrase to collaborate.
 - **Sticky Notes**: Create text notes on a virtual corkboard
-- **Images**: Upload images that are converted to 1-bit (dithered) to save space
+- **Images**: Upload images that are converted to compact grayscale data to save space
 - **Doodles**: Draw 64x64 pixel doodles
 - **Drag & Drop**: Position notes anywhere on the 2400x1600 corkboard
 - **Rotation**: Slight random rotation for a natural look, adjustable per note
-- **Colors**: Yellow, pink, blue, and green sticky notes
+- **Colors**: Yellow, pink, blue, green, orange, and lavender sticky notes
 - **Mobile Friendly**: Works on touch devices
 
 ## How It Works
@@ -67,8 +67,10 @@ mynotes/
 │       ├── board.js  # Board panning + note dragging
 │       ├── crypto.js # PBKDF2 + AES-GCM helpers
 │       ├── doodle.js # 64x64 doodle editor
-│       ├── image.js  # Image processing + dithering
-│       └── notes.js  # Note data management
+│       ├── image.js  # Image processing
+│       ├── notes.js  # Note data management
+│       ├── room-bg.js # Animated board background
+│       └── strings.js # UI copy config
 ├── data/             # SQLite database directory
 ├── package.json
 ├── DEPLOY.md         # Deployment guide

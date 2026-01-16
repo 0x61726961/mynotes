@@ -140,7 +140,7 @@ sudo ufw allow 443/tcp
 - [x] Helmet security headers
 - [x] JSON body size limited (500KB)
 - [x] Input validation on all API endpoints
-- [x] No inline scripts (CSP-friendly)
+- [x] CSP via Helmet (inline styles allowed for note styling)
 - [x] E2E encryption - server never sees plaintext
 
 ## Backup

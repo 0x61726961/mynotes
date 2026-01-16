@@ -831,12 +831,14 @@ const App = (() => {
     imageData = null;
     const imageInput = document.getElementById('image-input');
     const imagePreview = document.getElementById('image-preview');
+    const imageDropZone = document.getElementById('image-drop-zone');
     const saveButton = document.getElementById('save-image-btn');
     const isDraft = Boolean(pendingDraftNoteId && existingNote?.id === pendingDraftNoteId);
     setModalDeleteButtonState('delete-image-btn', isDraft);
 
     imageInput.value = '';
     imagePreview.classList.remove('has-image');
+    imageDropZone?.classList.remove('has-image');
     saveButton.disabled = true;
 
     if (existingNote) {
@@ -846,6 +848,7 @@ const App = (() => {
         imageData = existingNote.payload.img;
         ImageProcessor.renderToCanvas(imagePreview, imageData);
         imagePreview.classList.add('has-image');
+        imageDropZone?.classList.add('has-image');
         saveButton.disabled = false;
       }
     } else {
@@ -864,6 +867,7 @@ const App = (() => {
     imageModal.classList.remove('active');
     imageData = null;
     currentEditNoteId = null;
+    document.getElementById('image-drop-zone')?.classList.remove('has-image');
     discardDraftNote();
     resumeNotesRefreshIfReady();
   }
@@ -878,8 +882,10 @@ const App = (() => {
       
       // Show preview
       const preview = document.getElementById('image-preview');
+      const dropZone = document.getElementById('image-drop-zone');
       ImageProcessor.renderToCanvas(preview, imageData);
       preview.classList.add('has-image');
+      dropZone?.classList.add('has-image');
       document.getElementById('save-image-btn').disabled = false;
       
       hideLoading();
