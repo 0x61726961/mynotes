@@ -241,6 +241,7 @@ const Board = (() => {
   }
   
   function handleNoteMouseDown(e) {
+    if (e.button !== 0) return;
     const noteEl = e.currentTarget;
 
     if (isRotationEdge(noteEl, e.clientX, e.clientY)) {
@@ -532,6 +533,11 @@ const Board = (() => {
     if (!isDragging || !draggedNote) return null;
     return draggedNote.dataset.noteId;
   }
+
+  function getRotatingNoteId() {
+    if (!isRotating || !rotatingNote) return null;
+    return rotatingNote.dataset.noteId;
+  }
   
   function getNoteElement(noteId) {
     return corkboard.querySelector(`[data-note-id="${noteId}"]`);
@@ -545,6 +551,7 @@ const Board = (() => {
     clearNotes,
     getNoteElement,
     getDraggingNoteId,
+    getRotatingNoteId,
     setupNoteDragging,
     setupNoteInteractions,
     getViewportCenterPosition

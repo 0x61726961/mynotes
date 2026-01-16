@@ -408,6 +408,7 @@ const App = (() => {
   
   async function refreshBoard() {
     if (isRefreshing || !currentBoardId || pendingSaveCount > 0 || pendingSaveTimers.size > 0) return;
+    if (Board.getRotatingNoteId()) return;
     const refreshStartedAt = Date.now();
     isRefreshing = true;
     
