@@ -1,4 +1,5 @@
 const express = require('express');
+const fs = require('fs');
 const path = require('path');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
@@ -6,6 +7,14 @@ const db = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const MAX_NOTES_PER_BOARD = 300;
+const MAX_DB_BYTES = 2000000000;
+const MAX_PAYLOAD_BYTES = 200000;
+const LIST_PAGE_LIMIT = 100;
+const DB_PATH = process.env.DB_PATH || path.join(__dirname, '../data/mynotes.db');
+const DELETED_RETENTION_MS = 24 * 60 * 60 * 1000;
+const CLEANUP_INTERVAL_MS = 6 * 60 * 60 * 1000;
+const TRUST_PROXY = process.env.TRUST_PROXY === 'true';
 
 app.use(helmet({
   contentSecurityPolicy: {
@@ -24,17 +33,28 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false,
 }));
 
-const apiLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 100, // 100 requests per minute per IP
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many requests, please try again later.' }
-});
+if (TRUST_PROXY) {
+  app.set('trust proxy', 1);
+}
 
-app.use('/api/', apiLimiter);
+function createApiLimiter(options) {
+  return rateLimit({
+    windowMs: 60 * 1000,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many requests, please try again later.' },
+    ...options
+  });
+}
 
-app.use(express.json({ limit: '500kb' }));
+const globalLimiter = createApiLimiter({ max: 200 });
+const listLimiter = createApiLimiter({ max: 60 });
+const updateLimiter = createApiLimiter({ max: 120 });
+const createLimiter = createApiLimiter({ max: 20 });
+const deleteLimiter = createApiLimiter({ max: 20 });
+
+app.use(express.json({ limit: '200kb' }));
+app.use('/api/', globalLimiter);
 
 app.use(express.static(path.join(__dirname, '../public')));
 
@@ -49,7 +69,7 @@ function isValidNoteId(id) {
 }
 
 function isValidPayload(payload) {
-  if (typeof payload !== 'string' || payload.length > 500000) return false;
+  if (typeof payload !== 'string' || payload.length > MAX_PAYLOAD_BYTES) return false;
   try {
     const parsed = JSON.parse(payload);
     return parsed.iv && parsed.ct && 
@@ -60,15 +80,54 @@ function isValidPayload(payload) {
   }
 }
 
-app.post('/api/notes/list', (req, res) => {
+function getFileSize(filepath) {
   try {
-    const { board_id } = req.body;
+    return fs.statSync(filepath).size;
+  } catch (err) {
+    if (err.code === 'ENOENT') return 0;
+    throw err;
+  }
+}
+
+function getDatabaseSizeBytes() {
+  return (
+    getFileSize(DB_PATH) +
+    getFileSize(`${DB_PATH}-wal`) +
+    getFileSize(`${DB_PATH}-shm`)
+  );
+}
+
+function cleanupDeletedNotes() {
+  const cutoff = Date.now() - DELETED_RETENTION_MS;
+  const removed = db.cleanupDeletedNotes(cutoff);
+  if (removed > 0) {
+    console.log(`Cleaned up ${removed} deleted notes.`);
+  }
+}
+
+app.post('/api/notes/list', listLimiter, (req, res) => {
+  try {
+    const { board_id, limit, offset } = req.body;
     
     if (!isValidBoardId(board_id)) {
       return res.status(400).json({ error: 'Invalid board_id' });
     }
-    
-    const notes = db.getNotes(board_id);
+
+    const requestedLimit = limit ?? LIST_PAGE_LIMIT;
+    const parsedLimit = Number(requestedLimit);
+    if (!Number.isFinite(parsedLimit) || parsedLimit <= 0) {
+      return res.status(400).json({ error: 'Invalid limit' });
+    }
+
+    const parsedOffset = Number(offset ?? 0);
+    if (!Number.isFinite(parsedOffset) || parsedOffset < 0) {
+      return res.status(400).json({ error: 'Invalid offset' });
+    }
+
+    const safeLimit = Math.min(Math.floor(parsedLimit), LIST_PAGE_LIMIT);
+    const safeOffset = Math.floor(parsedOffset);
+
+    const notes = db.getNotesPaged(board_id, safeLimit, safeOffset);
     res.json({ notes });
   } catch (err) {
     console.error('Error listing notes:', err);
@@ -76,7 +135,7 @@ app.post('/api/notes/list', (req, res) => {
   }
 });
 
-app.post('/api/notes/create', (req, res) => {
+app.post('/api/notes/create', createLimiter, (req, res) => {
   try {
     const { board_id, payload } = req.body;
     
@@ -88,17 +147,28 @@ app.post('/api/notes/create', (req, res) => {
       return res.status(400).json({ error: 'Invalid payload' });
     }
     
+        const dbSizeBytes = getDatabaseSizeBytes();
+    if (dbSizeBytes >= MAX_DB_BYTES) {
+      return res.status(507).json({ error: 'Database limit reached' });
+    }
+
     db.ensureBoard(board_id);
     
+    const noteCount = db.getNoteCount(board_id);
+    if (noteCount >= MAX_NOTES_PER_BOARD) {
+      return res.status(409).json({ error: 'Note limit exceeded' });
+    }
+
     const note = db.createNote(board_id, payload);
     res.json({ id: note.id });
+
   } catch (err) {
     console.error('Error creating note:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });
 
-app.post('/api/notes/update', (req, res) => {
+app.post('/api/notes/update', updateLimiter, (req, res) => {
   try {
     const { board_id, id, payload, deleted } = req.body;
     
@@ -127,7 +197,7 @@ app.post('/api/notes/update', (req, res) => {
   }
 });
 
-app.post('/api/notes/delete', (req, res) => {
+app.post('/api/notes/delete', deleteLimiter, (req, res) => {
   try {
     const { board_id, id } = req.body;
     
@@ -155,6 +225,19 @@ app.post('/api/notes/delete', (req, res) => {
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
+
+try {
+  cleanupDeletedNotes();
+  setInterval(() => {
+    try {
+      cleanupDeletedNotes();
+    } catch (err) {
+      console.error('Failed to cleanup deleted notes:', err);
+    }
+  }, CLEANUP_INTERVAL_MS);
+} catch (err) {
+  console.error('Failed to run initial deleted notes cleanup:', err);
+}
 
 app.listen(PORT, () => {
   console.log(`MyNotes server running on http://localhost:${PORT}`);

@@ -5,6 +5,7 @@ const Notes = (() => {
   
   const COLORS = ['yellow', 'pink', 'blue', 'green', 'orange', 'lavender'];
   const COLOR_VARIANTS = ['', 'v1', 'v2'];
+  const PAGE_LIMIT = 100;
   
   let notesCache = new Map();
   let encryptionKey = null;
@@ -63,6 +64,20 @@ const Notes = (() => {
     return ordered;
   }
   
+  async function buildRequestError(response, fallbackMessage) {
+    let data = null;
+    try {
+      data = await response.json();
+    } catch (err) {
+      data = null;
+    }
+    const errorMessage = data?.error || fallbackMessage;
+    const error = new Error(errorMessage);
+    error.status = response.status;
+    error.serverError = data?.error;
+    return error;
+  }
+
   function createPayload(type, data, color, position, options = {}) {
     let x = BOARD_WIDTH / 2 - NOTE_SIZE / 2 + (Math.random() - 0.5) * 400;
     let y = BOARD_HEIGHT / 2 - NOTE_SIZE / 2 + (Math.random() - 0.5) * 300;
@@ -96,19 +111,23 @@ const Notes = (() => {
     return payload;
   }
   
-  async function loadNotes(options = {}) {
-    const { resetCache = true } = options;
+  async function fetchNotesPage(offset = 0) {
     const response = await fetch('/api/notes/list', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ board_id: boardId })
+      body: JSON.stringify({ board_id: boardId, limit: PAGE_LIMIT, offset })
     });
     
     if (!response.ok) {
-      throw new Error('Failed to load notes');
+      throw await buildRequestError(response, 'Failed to load notes');
     }
-    
-    const { notes } = await response.json();
+
+    const data = await response.json();
+    return Array.isArray(data?.notes) ? data.notes : [];
+  }
+
+  async function loadNotes(options = {}) {
+    const { resetCache = true } = options;
     
     if (resetCache) {
       notesCache.clear();
@@ -116,38 +135,52 @@ const Notes = (() => {
     }
     
     const decrypted = [];
-    for (const note of notes) {
-      try {
-        const payload = await Crypto.decryptPayload(encryptionKey, note.payload);
-        if (payload.done) continue;
+    let offset = 0;
 
-        if (payload.draft) {
-          try {
-            await deleteNote(note.id);
-          } catch (err) {
-            console.warn('Failed to delete draft note:', note.id, err);
+    while (true) {
+      const notes = await fetchNotesPage(offset);
+      if (notes.length === 0) {
+        break;
+      }
+
+      for (const note of notes) {
+        try {
+          const payload = await Crypto.decryptPayload(encryptionKey, note.payload);
+          if (payload.done) continue;
+
+          if (payload.draft) {
+            try {
+              await deleteNote(note.id);
+            } catch (err) {
+              console.warn('Failed to delete draft note:', note.id, err);
+            }
+            continue;
           }
-          continue;
-        }
 
-        const createdAt = Number.isFinite(note.created_at)
-          ? note.created_at
-          : payload.created_at;
-        const updatedAt = Number.isFinite(note.updated_at)
-          ? note.updated_at
-          : createdAt;
-        
-        const decryptedNote = {
-          id: note.id,
-          payload,
-          createdAt,
-          updatedAt,
-          variant: getVariant(note.id, payload)
-        };
-        notesCache.set(note.id, decryptedNote);
-        decrypted.push(decryptedNote);
-      } catch (err) {
-        console.warn('Failed to decrypt note:', note.id, err);
+          const createdAt = Number.isFinite(note.created_at)
+            ? note.created_at
+            : payload.created_at;
+          const updatedAt = Number.isFinite(note.updated_at)
+            ? note.updated_at
+            : createdAt;
+          
+          const decryptedNote = {
+            id: note.id,
+            payload,
+            createdAt,
+            updatedAt,
+            variant: getVariant(note.id, payload)
+          };
+          notesCache.set(note.id, decryptedNote);
+          decrypted.push(decryptedNote);
+        } catch (err) {
+          console.warn('Failed to decrypt note:', note.id, err);
+        }
+      }
+
+      offset += notes.length;
+      if (notes.length < PAGE_LIMIT) {
+        break;
       }
     }
     
@@ -168,7 +201,7 @@ const Notes = (() => {
     });
     
     if (!response.ok) {
-      throw new Error('Failed to create note');
+      throw await buildRequestError(response, 'Failed to create note');
     }
     
     const { id } = await response.json();
@@ -208,7 +241,7 @@ const Notes = (() => {
     });
     
     if (!response.ok) {
-      throw new Error('Failed to update note');
+      throw await buildRequestError(response, 'Failed to update note');
     }
   }
   
@@ -223,7 +256,7 @@ const Notes = (() => {
     });
     
     if (!response.ok) {
-      throw new Error('Failed to delete note');
+      throw await buildRequestError(response, 'Failed to delete note');
     }
     
     notesCache.delete(id);

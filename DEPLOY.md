@@ -39,6 +39,7 @@ mkdir -p data
 # Create .env file
 PORT=3000
 DB_PATH=/var/www/mynotes/data/mynotes.db
+TRUST_PROXY=true # set true when running behind nginx/caddy
 ```
 
 ### 3. Process Manager (PM2)
@@ -131,17 +132,23 @@ sudo certbot --nginx -d mynotes.yourdomain.com
 # Allow HTTP/HTTPS
 sudo ufw allow 80/tcp
 sudo ufw allow 443/tcp
+
+# Block direct access to the Node server (keep it behind your proxy)
+sudo ufw deny 3000/tcp
 ```
 
 ## Security Checklist
 
 - [x] HTTPS enforced (via reverse proxy)
-- [x] Rate limiting enabled (100 req/min/IP)
+- [x] Rate limiting enabled (per-route limits)
 - [x] Helmet security headers
-- [x] JSON body size limited (500KB)
+- [x] JSON body size limited (200KB)
 - [x] Input validation on all API endpoints
 - [x] CSP via Helmet (inline styles allowed for note styling)
 - [x] E2E encryption - server never sees plaintext
+- [x] 300 notes per board cap
+- [x] 2GB database size guardrail (db + wal + shm)
+- [x] Soft-deleted notes purged after 24 hours
 
 ## Backup
 
@@ -179,12 +186,13 @@ chmod 755 data/
 
 ### Rate limit errors
 
-The default is 100 requests per minute per IP. For higher traffic, adjust in `server/index.js`:
+Rate limits are configured per route in `server/index.js`. For higher traffic, adjust the per-route limiters:
 
 ```javascript
-const apiLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 200, // increase limit
-  ...
-});
+const listLimiter = createApiLimiter({ max: 60 });
+const updateLimiter = createApiLimiter({ max: 120 });
+const createLimiter = createApiLimiter({ max: 20 });
+const deleteLimiter = createApiLimiter({ max: 20 });
 ```
+
+If you're running behind a reverse proxy, set `TRUST_PROXY=true` so IP-based limits use the real client IP.

@@ -78,6 +78,9 @@ window.AppStrings = {
     processImageFail: 'Failed to process image.',
     saveImageFail: 'Failed to save image note.',
     saveDoodleFail: 'Failed to save doodle note.',
+    noteLimitExceeded: 'Note limit exceeded.',
+    databaseLimitReached: 'Storage limit reached. Please delete some notes.',
+    payloadTooLarge: 'Note is too large.',
     drawSomething: 'Doodle a little first!'
   }
 };

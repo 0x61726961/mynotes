@@ -31,6 +31,8 @@ little notes app I wanted to make for myself. the rest of this shit is vibecoded
 - **Random 12-byte IV** per note
 - Server stores only opaque board IDs and encrypted payloads
 - No accounts, no cookies, no tracking
+- Server-side guardrails: 300 notes per board, 200KB payload cap, 2GB database cap
+- Soft-deleted notes are purged after 24 hours
 
 ## Tech Stack
 
@@ -83,7 +85,7 @@ All endpoints accept JSON and require a valid `board_id` (64-char hex string).
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/notes/list` | List notes for a board |
+| POST | `/api/notes/list` | List notes for a board (supports `limit`, `offset`) |
 | POST | `/api/notes/create` | Create a new note |
 | POST | `/api/notes/update` | Update a note |
 | POST | `/api/notes/delete` | Soft-delete a note |

@@ -37,6 +37,19 @@ const App = (() => {
     return typeof value === 'string' ? value : fallback;
   }
 
+  function getNoteErrorMessage(err, fallback) {
+    if (err?.status === 409 || err?.serverError === 'Note limit exceeded') {
+      return resolveString(STRINGS.toasts?.noteLimitExceeded, 'Note limit exceeded.');
+    }
+    if (err?.status === 507 || err?.serverError === 'Database limit reached') {
+      return resolveString(STRINGS.toasts?.databaseLimitReached, 'Storage limit reached.');
+    }
+    if (err?.status === 400 && err?.serverError === 'Invalid payload') {
+      return resolveString(STRINGS.toasts?.payloadTooLarge, 'Note is too large.');
+    }
+    return fallback;
+  }
+
   function setTextById(id, text) {
     const el = document.getElementById(id);
     if (el && typeof text === 'string') {
@@ -499,7 +512,7 @@ const App = (() => {
       return note;
     } catch (err) {
       console.error('Failed to create draft note:', err);
-      showToast(resolveString(STRINGS.toasts?.createNoteFail, 'Failed to create note'));
+      showToast(getNoteErrorMessage(err, resolveString(STRINGS.toasts?.createNoteFail, 'Failed to create note')));
       return null;
     }
   }
@@ -630,7 +643,12 @@ const App = (() => {
       { x, y, rot: getRotationForNote(noteId) },
       (err) => {
         console.error('Failed to save note position:', err);
-        showToast(resolveString(STRINGS.toasts?.saveNotePositionFail, 'Failed to save note position'));
+        showToast(
+          getNoteErrorMessage(
+            err,
+            resolveString(STRINGS.toasts?.saveNotePositionFail, 'Failed to save note position')
+          )
+        );
       }
     );
   }
@@ -641,7 +659,12 @@ const App = (() => {
       { rot: rotation },
       (err) => {
         console.error('Failed to save note rotation:', err);
-        showToast(resolveString(STRINGS.toasts?.saveNoteRotationFail, 'Failed to save note rotation'));
+        showToast(
+          getNoteErrorMessage(
+            err,
+            resolveString(STRINGS.toasts?.saveNoteRotationFail, 'Failed to save note rotation')
+          )
+        );
       }
     );
   }
@@ -738,7 +761,7 @@ const App = (() => {
       closeTextModal();
     } catch (err) {
       console.error('Failed to save note:', err);
-      showToast(resolveString(STRINGS.toasts?.saveNoteFail, 'Failed to save note'));
+      showToast(getNoteErrorMessage(err, resolveString(STRINGS.toasts?.saveNoteFail, 'Failed to save note')));
     }
   }
   
@@ -840,7 +863,7 @@ const App = (() => {
       closeImageModal();
     } catch (err) {
       console.error('Failed to save image note:', err);
-      showToast(resolveString(STRINGS.toasts?.saveImageFail, 'Failed to save image note'));
+      showToast(getNoteErrorMessage(err, resolveString(STRINGS.toasts?.saveImageFail, 'Failed to save image note')));
     }
   }
   
@@ -924,7 +947,7 @@ const App = (() => {
       closeDoodleModal();
     } catch (err) {
       console.error('Failed to save doodle note:', err);
-      showToast(resolveString(STRINGS.toasts?.saveDoodleFail, 'Failed to save doodle note'));
+      showToast(getNoteErrorMessage(err, resolveString(STRINGS.toasts?.saveDoodleFail, 'Failed to save doodle note')));
     }
   }
   

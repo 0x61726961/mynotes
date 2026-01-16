@@ -31,7 +31,10 @@ const stmts = {
   getBoard: db.prepare('SELECT * FROM boards WHERE id = ?'),
   createBoard: db.prepare('INSERT INTO boards (id, created_at) VALUES (?, ?)'),
   getNotes: db.prepare('SELECT id, payload, created_at, updated_at FROM notes WHERE board_id = ? AND deleted = 0'),
+  getNotesPaged: db.prepare('SELECT id, payload, created_at, updated_at FROM notes WHERE board_id = ? AND deleted = 0 ORDER BY created_at ASC, id ASC LIMIT ? OFFSET ?'),
   getNote: db.prepare('SELECT * FROM notes WHERE id = ? AND board_id = ?'),
+  getNoteCount: db.prepare('SELECT COUNT(*) AS count FROM notes WHERE board_id = ? AND deleted = 0'),
+  deleteOldDeleted: db.prepare('DELETE FROM notes WHERE deleted = 1 AND updated_at < ?'),
   createNote: db.prepare('INSERT INTO notes (id, board_id, payload, created_at, updated_at, deleted) VALUES (?, ?, ?, ?, ?, 0)'),
   updateNote: db.prepare('UPDATE notes SET payload = ?, updated_at = ? WHERE id = ? AND board_id = ?'),
   softDeleteNote: db.prepare('UPDATE notes SET deleted = 1, updated_at = ? WHERE id = ? AND board_id = ?'),
@@ -51,6 +54,20 @@ function ensureBoard(boardId) {
 
 function getNotes(boardId) {
   return stmts.getNotes.all(boardId);
+}
+
+function getNotesPaged(boardId, limit, offset) {
+  return stmts.getNotesPaged.all(boardId, limit, offset);
+}
+
+function getNoteCount(boardId) {
+  const row = stmts.getNoteCount.get(boardId);
+  return row ? row.count : 0;
+}
+
+function cleanupDeletedNotes(cutoffTimestamp) {
+  const result = stmts.deleteOldDeleted.run(cutoffTimestamp);
+  return result.changes || 0;
 }
 
 function createNote(boardId, payload) {
@@ -88,6 +105,9 @@ function deleteNote(boardId, noteId) {
 module.exports = {
   ensureBoard,
   getNotes,
+  getNotesPaged,
+  getNoteCount,
+  cleanupDeletedNotes,
   createNote,
   updateNote,
   deleteNote,
