@@ -529,7 +529,7 @@ const App = (() => {
           : { doodle: null };
 
       markLocalChange();
-      const note = await Notes.createNote(type, data, color, position);
+      const note = await Notes.createNote(type, data, color, position, { draft: true });
       const noteEl = Notes.renderNote(note);
       Board.addNote(noteEl);
       pendingDraftNoteId = note.id;
@@ -768,8 +768,13 @@ const App = (() => {
     try {
       if (currentEditNoteId) {
         // Update existing note
+        const updates = {
+          text,
+          color: selectedColor,
+          ...(isDraft ? { draft: false } : {})
+        };
         markLocalChange();
-        await runNoteUpdate(currentEditNoteId, { text, color: selectedColor });
+        await runNoteUpdate(currentEditNoteId, updates);
         
         // Re-render note
         const note = Notes.getNote(currentEditNoteId);
@@ -873,8 +878,13 @@ const App = (() => {
     
     try {
       if (currentEditNoteId) {
+        const updates = {
+          img: imageData,
+          color: selectedColor,
+          ...(isDraft ? { draft: false } : {})
+        };
         markLocalChange();
-        await runNoteUpdate(currentEditNoteId, { img: imageData, color: selectedColor });
+        await runNoteUpdate(currentEditNoteId, updates);
         const note = Notes.getNote(currentEditNoteId);
         const oldEl = Board.getNoteElement(currentEditNoteId);
         if (oldEl && note) {
@@ -949,8 +959,13 @@ const App = (() => {
     try {
       const doodleData = DoodleEditor.getData();
       if (currentEditNoteId) {
+        const updates = {
+          doodle: doodleData,
+          color: selectedColor,
+          ...(isDraft ? { draft: false } : {})
+        };
         markLocalChange();
-        await runNoteUpdate(currentEditNoteId, { doodle: doodleData, color: selectedColor });
+        await runNoteUpdate(currentEditNoteId, updates);
         const note = Notes.getNote(currentEditNoteId);
         const oldEl = Board.getNoteElement(currentEditNoteId);
         if (oldEl && note) {

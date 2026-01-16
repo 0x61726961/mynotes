@@ -36,7 +36,7 @@ window.AppStrings = {
       save: 'Save'
     },
     image: {
-      title: 'Add Image',
+      title: 'Add Picture',
       dropZone: 'Drag \'n Drop / Click Here',
       delete: 'Delete',
       cancel: 'Cancel',

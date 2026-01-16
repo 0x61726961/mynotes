@@ -90,9 +90,10 @@ const Notes = (() => {
    * @param {string} type - 'text', 'image', or 'doodle'
    * @param {object} data - Type-specific data
    * @param {string} color - Note color
+   * @param {{draft?: boolean}} [options]
    * @returns {object} Note payload
    */
-  function createPayload(type, data, color, position) {
+  function createPayload(type, data, color, position, options = {}) {
     // Random position near center of board
     let x = BOARD_WIDTH / 2 - NOTE_SIZE / 2 + (Math.random() - 0.5) * 400;
     let y = BOARD_HEIGHT / 2 - NOTE_SIZE / 2 + (Math.random() - 0.5) * 300;
@@ -111,7 +112,8 @@ const Notes = (() => {
       rot: randomRotation(),
       color: color || randomColor(),
       created_at: Date.now(),
-      done: false
+      done: false,
+      draft: Boolean(options.draft)
     };
     
     if (type === 'text') {
@@ -158,6 +160,15 @@ const Notes = (() => {
         // Skip done notes
         if (payload.done) continue;
 
+        if (payload.draft) {
+          try {
+            await deleteNote(note.id);
+          } catch (err) {
+            console.warn('Failed to delete draft note:', note.id, err);
+          }
+          continue;
+        }
+
         const createdAt = Number.isFinite(note.created_at)
           ? note.created_at
           : payload.created_at;
@@ -188,10 +199,11 @@ const Notes = (() => {
    * @param {string} type
    * @param {object} data
    * @param {string} color
+   * @param {{draft?: boolean}} [options]
    * @returns {Promise<object>} Created note with ID
    */
-  async function createNote(type, data, color, position) {
-    const payload = createPayload(type, data, color, position);
+  async function createNote(type, data, color, position, options = {}) {
+    const payload = createPayload(type, data, color, position, options);
     const encryptedPayload = await Crypto.encryptPayload(encryptionKey, payload);
     
     const response = await fetch('/api/notes/create', {
