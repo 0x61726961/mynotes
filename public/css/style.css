@@ -626,6 +626,10 @@ body.room-bg-active #room-bg {
   width: 320px;
 }
 
+#doodle-modal .note-editor {
+  width: 360px;
+}
+
 .note-editor h3 {
   margin-bottom: 1rem;
   color: #333;
@@ -887,5 +891,9 @@ body.room-bg-active #room-bg {
   
   .note-editor {
     width: 280px;
+  }
+
+  #doodle-modal .note-editor {
+    width: min(360px, 92vw);
   }
 }

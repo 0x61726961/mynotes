@@ -46,6 +46,7 @@ const Board = (() => {
     viewport.addEventListener('touchstart', handleTouchPanStart, { passive: false });
     viewport.addEventListener('touchmove', handleTouchPanMove, { passive: false });
     viewport.addEventListener('touchend', handleTouchPanEnd);
+    viewport.addEventListener('touchcancel', handleTouchPanEnd);
     
     window.addEventListener('resize', centerBoard);
   }
@@ -271,6 +272,7 @@ const Board = (() => {
     
     document.addEventListener('touchmove', handleNoteTouchMove, { passive: false });
     document.addEventListener('touchend', handleNoteTouchEnd);
+    document.addEventListener('touchcancel', handleNoteTouchEnd);
   }
   
   function startNoteDrag(e, noteEl, clientX, clientY) {
@@ -340,6 +342,7 @@ const Board = (() => {
     finishNoteDrag();
     document.removeEventListener('touchmove', handleNoteTouchMove);
     document.removeEventListener('touchend', handleNoteTouchEnd);
+    document.removeEventListener('touchcancel', handleNoteTouchEnd);
   }
   
   function finishNoteDrag() {
@@ -401,6 +404,7 @@ const Board = (() => {
     document.addEventListener('mouseup', handleRotationEnd);
     document.addEventListener('touchmove', handleRotationTouchMove, { passive: false });
     document.addEventListener('touchend', handleRotationEnd);
+    document.addEventListener('touchcancel', handleRotationEnd);
   }
   
   function handleRotationMove(e) {
@@ -506,6 +510,7 @@ const Board = (() => {
     document.removeEventListener('mouseup', handleRotationEnd);
     document.removeEventListener('touchmove', handleRotationTouchMove);
     document.removeEventListener('touchend', handleRotationEnd);
+    document.removeEventListener('touchcancel', handleRotationEnd);
   }
   
   function addNote(noteEl) {
