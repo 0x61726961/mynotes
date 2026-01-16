@@ -7,6 +7,7 @@ const Notes = (() => {
   const COLOR_VARIANTS = ['', 'v1', 'v2'];
   const PAGE_LIMIT = 100;
   const REQUEST_TIMEOUT_MS = 15000;
+  const DRAFT_CLEANUP_MS = 10 * 60 * 1000;
   const API_BASE = (() => {
     const path = window.location.pathname || '';
     return path.startsWith('/mynotes') ? '/mynotes/api' : '/api';
@@ -203,9 +204,26 @@ const Notes = (() => {
           }
 
           if (payload.draft && isEmptyDraft(payload)) {
+            const noteTimestamp = Number.isFinite(note.updated_at)
+              ? note.updated_at
+              : Number.isFinite(note.created_at)
+                ? note.created_at
+                : payload.created_at;
+            const ageMs = Number.isFinite(noteTimestamp) ? Date.now() - noteTimestamp : null;
+
+            if (ageMs !== null && ageMs < DRAFT_CLEANUP_MS) {
+              console.info('[Notes] keeping recent draft note', {
+                id: note.id,
+                type: payload.type,
+                ageMs
+              });
+              continue;
+            }
+
             console.warn('[Notes] deleting empty draft note', {
               id: note.id,
-              type: payload.type
+              type: payload.type,
+              ageMs
             });
             try {
               await deleteNote(note.id);
