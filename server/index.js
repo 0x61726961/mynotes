@@ -60,6 +60,10 @@ app.use(express.static(path.join(__dirname, '../public')));
 
 app.use('/assets', express.static(path.join(__dirname, '../assets')));
 
+app.get('/health', (req, res) => {
+  res.json({ ok: true });
+});
+
 const apiRouter = express.Router();
 
 function isValidBoardId(id) {
@@ -148,8 +152,8 @@ apiRouter.post('/notes/create', createLimiter, (req, res) => {
     if (!isValidPayload(payload)) {
       return res.status(400).json({ error: 'Invalid payload' });
     }
-    
-        const dbSizeBytes = getDatabaseSizeBytes();
+
+    const dbSizeBytes = getDatabaseSizeBytes();
     if (dbSizeBytes >= MAX_DB_BYTES) {
       return res.status(507).json({ error: 'Database limit reached' });
     }
@@ -230,19 +234,23 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
-try {
-  cleanupDeletedNotes();
-  setInterval(() => {
-    try {
-      cleanupDeletedNotes();
-    } catch (err) {
-      console.error('Failed to cleanup deleted notes:', err);
-    }
-  }, CLEANUP_INTERVAL_MS);
-} catch (err) {
-  console.error('Failed to run initial deleted notes cleanup:', err);
+if (require.main === module) {
+  try {
+    cleanupDeletedNotes();
+    setInterval(() => {
+      try {
+        cleanupDeletedNotes();
+      } catch (err) {
+        console.error('Failed to cleanup deleted notes:', err);
+      }
+    }, CLEANUP_INTERVAL_MS);
+  } catch (err) {
+    console.error('Failed to run initial deleted notes cleanup:', err);
+  }
+
+  app.listen(PORT, () => {
+    console.log(`MyNotes server running on http://localhost:${PORT}`);
+  });
 }
 
-app.listen(PORT, () => {
-  console.log(`MyNotes server running on http://localhost:${PORT}`);
-});
+module.exports = app;

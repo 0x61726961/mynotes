@@ -102,6 +102,10 @@ function deleteNote(boardId, noteId) {
   return true;
 }
 
+function close() {
+  db.close();
+}
+
 module.exports = {
   ensureBoard,
   getNotes,
@@ -111,4 +115,5 @@ module.exports = {
   createNote,
   updateNote,
   deleteNote,
+  close,
 };
