@@ -242,17 +242,29 @@ const Notes = (() => {
   async function createNote(type, data, color, position, options = {}) {
     const payload = createPayload(type, data, color, position, options);
     const encryptedPayload = await Crypto.encryptPayload(encryptionKey, payload);
-    
-    const response = await fetch(`${API_BASE}/notes/create`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        board_id: boardId,
-        payload: encryptedPayload
-      })
+    const payloadSize = typeof encryptedPayload === 'string' ? encryptedPayload.length : 0;
+    const body = JSON.stringify({
+      board_id: boardId,
+      payload: encryptedPayload
     });
-    
+    const bodySize = body.length;
+
+    console.info('[Notes] create payload', { type, payloadSize, bodySize });
+
+    let response;
+    try {
+      response = await fetch(`${API_BASE}/notes/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body
+      });
+    } catch (err) {
+      console.warn('[Notes] create fetch failed', { type, payloadSize, bodySize, error: err });
+      throw err;
+    }
+
     if (!response.ok) {
+      console.warn('[Notes] create failed', { status: response.status, type, payloadSize, bodySize });
       throw await buildRequestError(response, 'Failed to create note');
     }
     
@@ -281,18 +293,31 @@ const Notes = (() => {
     Object.assign(note.payload, updates);
     
     const encryptedPayload = await Crypto.encryptPayload(encryptionKey, note.payload);
-    
-    const response = await fetch(`${API_BASE}/notes/update`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        board_id: boardId,
-        id,
-        payload: encryptedPayload
-      })
+    const payloadSize = typeof encryptedPayload === 'string' ? encryptedPayload.length : 0;
+    const body = JSON.stringify({
+      board_id: boardId,
+      id,
+      payload: encryptedPayload
     });
+    const bodySize = body.length;
+    const type = note.payload?.type || 'unknown';
+
+    console.info('[Notes] update payload', { id, type, payloadSize, bodySize });
+
+    let response;
+    try {
+      response = await fetch(`${API_BASE}/notes/update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body
+      });
+    } catch (err) {
+      console.warn('[Notes] update fetch failed', { id, type, payloadSize, bodySize, error: err });
+      throw err;
+    }
     
     if (!response.ok) {
+      console.warn('[Notes] update failed', { status: response.status, id, type, payloadSize, bodySize });
       throw await buildRequestError(response, 'Failed to update note');
     }
   }

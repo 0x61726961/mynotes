@@ -150,6 +150,8 @@ apiRouter.post('/notes/create', createLimiter, (req, res) => {
     }
     
     if (!isValidPayload(payload)) {
+      const payloadLength = typeof payload === 'string' ? payload.length : null;
+      console.warn('Invalid payload on create', { board_id, payloadLength, max: MAX_PAYLOAD_BYTES });
       return res.status(400).json({ error: 'Invalid payload' });
     }
 
@@ -187,6 +189,13 @@ apiRouter.post('/notes/update', updateLimiter, (req, res) => {
     }
     
     if (payload !== undefined && !isValidPayload(payload)) {
+      const payloadLength = typeof payload === 'string' ? payload.length : null;
+      console.warn('Invalid payload on update', {
+        board_id,
+        id,
+        payloadLength,
+        max: MAX_PAYLOAD_BYTES
+      });
       return res.status(400).json({ error: 'Invalid payload' });
     }
     
