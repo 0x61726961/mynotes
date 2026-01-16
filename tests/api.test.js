@@ -2,6 +2,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const request = require('supertest');
+const Database = require('better-sqlite3');
 
 const dbPath = path.join(
   os.tmpdir(),
@@ -27,11 +28,24 @@ afterAll(() => {
 });
 
 describe('Notes API', () => {
+  test('serves the app shell', async () => {
+    const response = await request(app).get('/');
+
+    expect(response.status).toBe(200);
+    expect(response.text).toContain('id="login-screen"');
+    expect(response.text).toContain('js/app.js');
+  });
+
   test('returns a healthy response', async () => {
     const response = await request(app).get('/health');
 
     expect(response.status).toBe(200);
     expect(response.body.ok).toBe(true);
+
+    const subpathResponse = await request(app).get('/mynotes/health');
+
+    expect(subpathResponse.status).toBe(200);
+    expect(subpathResponse.body.ok).toBe(true);
   });
 
   test('rejects invalid board ids on create', async () => {
@@ -195,5 +209,25 @@ describe('Notes API', () => {
 
     expect(secondPage.status).toBe(200);
     expect(secondPage.body.notes).toHaveLength(1);
+  });
+
+  test('purges soft-deleted notes after retention window', () => {
+    const cleanupBoardId = 'f'.repeat(64);
+
+    db.ensureBoard(cleanupBoardId);
+    const note = db.createNote(cleanupBoardId, payload);
+    db.updateNote(cleanupBoardId, note.id, undefined, true);
+
+    const testDb = new Database(dbPath);
+    const oldTimestamp = Date.now() - 2 * 24 * 60 * 60 * 1000;
+    testDb.prepare('UPDATE notes SET updated_at = ? WHERE id = ?').run(oldTimestamp, note.id);
+
+    const removed = db.cleanupDeletedNotes(Date.now() - 24 * 60 * 60 * 1000);
+    expect(removed).toBe(1);
+
+    const row = testDb.prepare('SELECT COUNT(*) AS count FROM notes WHERE id = ?').get(note.id);
+    expect(row.count).toBe(0);
+
+    testDb.close();
   });
 });

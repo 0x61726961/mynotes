@@ -151,7 +151,7 @@ sudo systemctl reload nginx
 sudo certbot --nginx -d mynotes.yourdomain.com
 ```
 
-If you host at `/mynotes/`, the API routes are served from `/mynotes/api/`.
+If you host at `/mynotes/`, the API routes are served from `/mynotes/api/`. The health check is available at `/mynotes/health`.
 ```
 
 ### 6. Firewall
@@ -190,6 +190,9 @@ cp data/mynotes.db data/mynotes.db.backup
 ## Monitoring
 
 ```bash
+# Health check
+curl https://mynotes.yourdomain.com/mynotes/health
+
 # View PM2 logs
 pm2 logs mynotes
 

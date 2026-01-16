@@ -89,8 +89,9 @@ All endpoints accept JSON and require a valid `board_id` (64-char hex string).
 | POST | `/api/notes/create` | Create a new note |
 | POST | `/api/notes/update` | Update a note |
 | POST | `/api/notes/delete` | Soft-delete a note |
+| GET | `/health` | Health check |
 
-If you host the app under a subpath (e.g. `/mynotes/`), the API endpoints are available under `/mynotes/api/notes/*`.
+If you host the app under a subpath (e.g. `/mynotes/`), the API endpoints are available under `/mynotes/api/notes/*` and the health check is available at `/mynotes/health`.
 
 ## Deployment
 

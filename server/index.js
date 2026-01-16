@@ -60,7 +60,7 @@ app.use(express.static(path.join(__dirname, '../public')));
 
 app.use('/assets', express.static(path.join(__dirname, '../assets')));
 
-app.get('/health', (req, res) => {
+app.get(['/health', '/mynotes/health'], (req, res) => {
   res.json({ ok: true });
 });
 
