@@ -181,11 +181,26 @@ const Notes = (() => {
       }
 
       for (const note of notes) {
+        const encryptedPayloadLength = typeof note.payload === 'string' ? note.payload.length : null;
         try {
           let payload = await Crypto.decryptPayload(encryptionKey, note.payload);
           payload = sanitizePayload(payload);
 
+          if (payload.type === 'image') {
+            const imgSize = typeof payload.img?.data === 'string' ? payload.img.data.length : 0;
+            console.info('[Notes] load image note', {
+              id: note.id,
+              draft: Boolean(payload.draft),
+              hasImg: Boolean(payload.img?.data),
+              imgSize
+            });
+          }
+
           if (payload.draft && isEmptyDraft(payload)) {
+            console.warn('[Notes] deleting empty draft note', {
+              id: note.id,
+              type: payload.type
+            });
             try {
               await deleteNote(note.id);
             } catch (err) {
@@ -227,7 +242,10 @@ const Notes = (() => {
           notesCache.set(note.id, decryptedNote);
           decrypted.push(decryptedNote);
         } catch (err) {
-          console.warn('Failed to decrypt note:', note.id, err);
+          console.warn('Failed to decrypt note:', note.id, {
+            error: err,
+            encryptedPayloadLength
+          });
         }
       }
 
