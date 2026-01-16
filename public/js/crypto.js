@@ -12,11 +12,14 @@ const Crypto = (() => {
   
   function bufferToBase64(buffer) {
     const bytes = new Uint8Array(buffer);
-    let binary = '';
-    for (let i = 0; i < bytes.length; i++) {
-      binary += String.fromCharCode(bytes[i]);
+    // Process in chunks to avoid memory issues on mobile browsers
+    const CHUNK_SIZE = 8192;
+    const chunks = [];
+    for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
+      const chunk = bytes.subarray(i, Math.min(i + CHUNK_SIZE, bytes.length));
+      chunks.push(String.fromCharCode.apply(null, chunk));
     }
-    return btoa(binary);
+    return btoa(chunks.join(''));
   }
   
   function base64ToBuffer(base64) {
@@ -76,16 +79,28 @@ const Crypto = (() => {
   
   async function encrypt(key, plaintext) {
     const iv = crypto.getRandomValues(new Uint8Array(12));
+    const plaintextBytes = new TextEncoder().encode(plaintext);
     
     const ciphertext = await crypto.subtle.encrypt(
       { name: 'AES-GCM', iv: iv },
       key,
-      new TextEncoder().encode(plaintext)
+      plaintextBytes
     );
     
+    if (!ciphertext || ciphertext.byteLength === 0) {
+      throw new Error('Encryption produced empty ciphertext');
+    }
+    
+    const ivBase64 = bufferToBase64(iv);
+    const ctBase64 = bufferToBase64(ciphertext);
+    
+    if (!ivBase64 || !ctBase64) {
+      throw new Error('Failed to encode encrypted data');
+    }
+    
     return {
-      iv: bufferToBase64(iv),
-      ct: bufferToBase64(ciphertext)
+      iv: ivBase64,
+      ct: ctBase64
     };
   }
   

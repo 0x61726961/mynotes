@@ -2,6 +2,8 @@ const Board = (() => {
   const DRAG_Z_INDEX = Number.MAX_SAFE_INTEGER;
   const ROTATION_EDGE_SIZE = 12;
   const ROTATION_OUTSIDE_SIZE = 24;
+  const TAP_MOVE_THRESHOLD = 8;
+  const TAP_MAX_DURATION = 250;
   let viewport = null;
   let corkboard = null;
   let panOffset = { x: 0, y: 0 };
@@ -23,6 +25,8 @@ const Board = (() => {
   let initialRotation = 0;
   let rotationRafId = null;
   let pendingRotationPoint = null;
+
+  let pendingTap = null;
   
   let onNoteMove = null;
   let onNoteRotate = null;
@@ -264,11 +268,17 @@ const Board = (() => {
     const touch = e.touches[0];
 
     if (isRotationEdge(noteEl, touch.clientX, touch.clientY)) {
+      pendingTap = null;
       startRotation(e, noteEl);
       return;
     }
-    
-    startNoteDrag(e, noteEl, touch.clientX, touch.clientY);
+
+    pendingTap = {
+      noteEl,
+      startX: touch.clientX,
+      startY: touch.clientY,
+      startTime: Date.now()
+    };
     
     document.addEventListener('touchmove', handleNoteTouchMove, { passive: false });
     document.addEventListener('touchend', handleNoteTouchEnd);
@@ -301,10 +311,23 @@ const Board = (() => {
   }
   
   function handleNoteTouchMove(e) {
-    if (!isDragging || !draggedNote || e.touches.length !== 1) return;
+    if (e.touches.length !== 1) return;
+    const touch = e.touches[0];
+
+    if (!isDragging) {
+      if (!pendingTap) return;
+      const deltaX = touch.clientX - pendingTap.startX;
+      const deltaY = touch.clientY - pendingTap.startY;
+      const distance = Math.hypot(deltaX, deltaY);
+      if (distance < TAP_MOVE_THRESHOLD) return;
+
+      startNoteDrag(e, pendingTap.noteEl, touch.clientX, touch.clientY);
+      pendingTap = null;
+    }
+
+    if (!isDragging || !draggedNote) return;
     e.preventDefault();
     
-    const touch = e.touches[0];
     pendingDragPoint = { x: touch.clientX, y: touch.clientY };
     if (dragRafId) return;
     dragRafId = requestAnimationFrame(applyDragMove);
@@ -339,7 +362,20 @@ const Board = (() => {
   }
   
   function handleNoteTouchEnd() {
-    finishNoteDrag();
+    if (isDragging) {
+      finishNoteDrag();
+    } else if (pendingTap) {
+      const elapsed = Date.now() - pendingTap.startTime;
+      if (elapsed <= TAP_MAX_DURATION) {
+        const noteId = pendingTap.noteEl?.dataset?.noteId;
+        if (noteId) {
+          bringNoteToFront(pendingTap.noteEl);
+          onNoteClick(noteId, pendingTap.startX, pendingTap.startY, 'edit');
+        }
+      }
+    }
+
+    pendingTap = null;
     document.removeEventListener('touchmove', handleNoteTouchMove);
     document.removeEventListener('touchend', handleNoteTouchEnd);
     document.removeEventListener('touchcancel', handleNoteTouchEnd);

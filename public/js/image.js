@@ -7,11 +7,36 @@ const ImageProcessor = (() => {
   function loadImage(source) {
     return new Promise((resolve, reject) => {
       const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = reject;
+      let objectUrl = null;
+      
+      const cleanup = () => {
+        if (objectUrl) {
+          URL.revokeObjectURL(objectUrl);
+          objectUrl = null;
+        }
+      };
+      
+      img.onload = async () => {
+        try {
+          // Ensure image is fully decoded before use (helps iOS Safari)
+          if (typeof img.decode === 'function') {
+            await img.decode();
+          }
+          cleanup();
+          resolve(img);
+        } catch (err) {
+          cleanup();
+          reject(err);
+        }
+      };
+      img.onerror = (err) => {
+        cleanup();
+        reject(err);
+      };
       
       if (source instanceof File) {
-        img.src = URL.createObjectURL(source);
+        objectUrl = URL.createObjectURL(source);
+        img.src = objectUrl;
       } else {
         img.src = source;
       }
