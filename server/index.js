@@ -144,17 +144,12 @@ apiRouter.post('/notes/list', listLimiter, (req, res) => {
 apiRouter.post('/notes/create', createLimiter, (req, res) => {
   try {
     const { board_id, payload } = req.body;
-    const contentLength = req.headers['content-length'];
-    const payloadLength = typeof payload === 'string' ? payload.length : null;
-
-    console.info('Notes create request', { board_id, contentLength, payloadLength });
     
     if (!isValidBoardId(board_id)) {
       return res.status(400).json({ error: 'Invalid board_id' });
     }
     
     if (!isValidPayload(payload)) {
-      console.warn('Invalid payload on create', { board_id, payloadLength, max: MAX_PAYLOAD_BYTES });
       return res.status(400).json({ error: 'Invalid payload' });
     }
 
@@ -182,10 +177,6 @@ apiRouter.post('/notes/create', createLimiter, (req, res) => {
 apiRouter.post('/notes/update', updateLimiter, (req, res) => {
   try {
     const { board_id, id, payload, deleted } = req.body;
-    const contentLength = req.headers['content-length'];
-    const payloadLength = typeof payload === 'string' ? payload.length : null;
-
-    console.info('Notes update request', { board_id, id, contentLength, payloadLength });
     
     if (!isValidBoardId(board_id)) {
       return res.status(400).json({ error: 'Invalid board_id' });
@@ -196,12 +187,6 @@ apiRouter.post('/notes/update', updateLimiter, (req, res) => {
     }
     
     if (payload !== undefined && !isValidPayload(payload)) {
-      console.warn('Invalid payload on update', {
-        board_id,
-        id,
-        payloadLength,
-        max: MAX_PAYLOAD_BYTES
-      });
       return res.status(400).json({ error: 'Invalid payload' });
     }
     
@@ -210,15 +195,6 @@ apiRouter.post('/notes/update', updateLimiter, (req, res) => {
     if (!success) {
       return res.status(404).json({ error: 'Note not found' });
     }
-
-    const storedNote = db.getNote(board_id, id);
-    console.info('Notes update stored', {
-      board_id,
-      id,
-      exists: Boolean(storedNote),
-      deleted: storedNote?.deleted,
-      payloadLength: storedNote?.payload ? storedNote.payload.length : null
-    });
     
     res.json({ ok: true });
   } catch (err) {
@@ -230,9 +206,6 @@ apiRouter.post('/notes/update', updateLimiter, (req, res) => {
 apiRouter.post('/notes/delete', deleteLimiter, (req, res) => {
   try {
     const { board_id, id } = req.body;
-    const contentLength = req.headers['content-length'];
-
-    console.info('Notes delete request', { board_id, id, contentLength });
     
     if (!isValidBoardId(board_id)) {
       return res.status(400).json({ error: 'Invalid board_id' });
@@ -256,20 +229,6 @@ apiRouter.post('/notes/delete', deleteLimiter, (req, res) => {
 });
 
 app.use(['/api', '/mynotes/api'], apiRouter);
-
-app.use((err, req, res, next) => {
-  if (err?.type === 'entity.too.large') {
-    const contentLength = req.headers['content-length'];
-    console.warn('Request body too large', { path: req.path, contentLength });
-    return res.status(413).json({ error: 'Payload too large' });
-  }
-  if (err?.type === 'entity.parse.failed') {
-    const contentLength = req.headers['content-length'];
-    console.warn('Request body parse failed', { path: req.path, contentLength });
-    return res.status(400).json({ error: 'Invalid request body' });
-  }
-  return next(err);
-});
 
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));

@@ -2,8 +2,9 @@ const Board = (() => {
   const DRAG_Z_INDEX = Number.MAX_SAFE_INTEGER;
   const ROTATION_EDGE_SIZE = 12;
   const ROTATION_OUTSIDE_SIZE = 24;
-  const TAP_MOVE_THRESHOLD = 8;
-  const TAP_MAX_DURATION = 250;
+  const DOUBLE_TAP_DELAY = 350;
+  const DOUBLE_TAP_DISTANCE = 20;
+  const DRAG_START_DISTANCE = 6;
   let viewport = null;
   let corkboard = null;
   let panOffset = { x: 0, y: 0 };
@@ -25,8 +26,12 @@ const Board = (() => {
   let initialRotation = 0;
   let rotationRafId = null;
   let pendingRotationPoint = null;
-
-  let pendingTap = null;
+  
+  let lastTapTime = 0;
+  let lastTapNoteId = null;
+  let lastTapPosition = null;
+  let pendingTouchNote = null;
+  let pendingTouchStart = null;
   
   let onNoteMove = null;
   let onNoteRotate = null;
@@ -268,17 +273,19 @@ const Board = (() => {
     const touch = e.touches[0];
 
     if (isRotationEdge(noteEl, touch.clientX, touch.clientY)) {
-      pendingTap = null;
       startRotation(e, noteEl);
       return;
     }
 
-    pendingTap = {
-      noteEl,
-      startX: touch.clientX,
-      startY: touch.clientY,
-      startTime: Date.now()
-    };
+    if (isDoubleTap(noteEl, touch.clientX, touch.clientY)) {
+      bringNoteToFront(noteEl);
+      onNoteClick(noteEl.dataset.noteId, touch.clientX, touch.clientY, 'edit');
+      resetTapState();
+      return;
+    }
+
+    pendingTouchNote = noteEl;
+    pendingTouchStart = { x: touch.clientX, y: touch.clientY };
     
     document.addEventListener('touchmove', handleNoteTouchMove, { passive: false });
     document.addEventListener('touchend', handleNoteTouchEnd);
@@ -288,6 +295,7 @@ const Board = (() => {
   function startNoteDrag(e, noteEl, clientX, clientY) {
     isDragging = true;
     draggedNote = noteEl;
+    resetTapState();
 
     liftNoteForDrag(noteEl);
     
@@ -312,22 +320,23 @@ const Board = (() => {
   
   function handleNoteTouchMove(e) {
     if (e.touches.length !== 1) return;
+    e.preventDefault();
+    
     const touch = e.touches[0];
 
     if (!isDragging) {
-      if (!pendingTap) return;
-      const deltaX = touch.clientX - pendingTap.startX;
-      const deltaY = touch.clientY - pendingTap.startY;
-      const distance = Math.hypot(deltaX, deltaY);
-      if (distance < TAP_MOVE_THRESHOLD) return;
-
-      startNoteDrag(e, pendingTap.noteEl, touch.clientX, touch.clientY);
-      pendingTap = null;
+      if (!pendingTouchNote || !pendingTouchStart) return;
+      const dx = touch.clientX - pendingTouchStart.x;
+      const dy = touch.clientY - pendingTouchStart.y;
+      if (Math.hypot(dx, dy) < DRAG_START_DISTANCE) {
+        return;
+      }
+      startNoteDrag(e, pendingTouchNote, touch.clientX, touch.clientY);
+      pendingTouchNote = null;
+      pendingTouchStart = null;
     }
 
-    if (!isDragging || !draggedNote) return;
-    e.preventDefault();
-    
+    if (!draggedNote) return;
     pendingDragPoint = { x: touch.clientX, y: touch.clientY };
     if (dragRafId) return;
     dragRafId = requestAnimationFrame(applyDragMove);
@@ -364,18 +373,16 @@ const Board = (() => {
   function handleNoteTouchEnd() {
     if (isDragging) {
       finishNoteDrag();
-    } else if (pendingTap) {
-      const elapsed = Date.now() - pendingTap.startTime;
-      if (elapsed <= TAP_MAX_DURATION) {
-        const noteId = pendingTap.noteEl?.dataset?.noteId;
-        if (noteId) {
-          bringNoteToFront(pendingTap.noteEl);
-          onNoteClick(noteId, pendingTap.startX, pendingTap.startY, 'edit');
-        }
-      }
+      resetTapState();
+    } else if (pendingTouchNote && pendingTouchStart) {
+      lastTapTime = Date.now();
+      lastTapNoteId = pendingTouchNote.dataset.noteId;
+      lastTapPosition = { ...pendingTouchStart };
     }
 
-    pendingTap = null;
+    pendingTouchNote = null;
+    pendingTouchStart = null;
+
     document.removeEventListener('touchmove', handleNoteTouchMove);
     document.removeEventListener('touchend', handleNoteTouchEnd);
     document.removeEventListener('touchcancel', handleNoteTouchEnd);
@@ -503,6 +510,21 @@ const Board = (() => {
     const transform = noteEl?.style?.transform || '';
     const match = transform.match(/rotate\(([-\d.]+)deg\)/);
     return match ? parseFloat(match[1]) : 0;
+  }
+
+  function isDoubleTap(noteEl, clientX, clientY) {
+    if (!lastTapTime || !lastTapPosition || !noteEl) return false;
+    if (Date.now() - lastTapTime > DOUBLE_TAP_DELAY) return false;
+    if (lastTapNoteId !== noteEl.dataset.noteId) return false;
+    const dx = clientX - lastTapPosition.x;
+    const dy = clientY - lastTapPosition.y;
+    return Math.hypot(dx, dy) <= DOUBLE_TAP_DISTANCE;
+  }
+
+  function resetTapState() {
+    lastTapTime = 0;
+    lastTapNoteId = null;
+    lastTapPosition = null;
   }
 
   function bringNoteToFront(noteEl) {

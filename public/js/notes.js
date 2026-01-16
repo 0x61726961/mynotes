@@ -6,8 +6,6 @@ const Notes = (() => {
   const COLORS = ['yellow', 'pink', 'blue', 'green', 'orange', 'lavender'];
   const COLOR_VARIANTS = ['', 'v1', 'v2'];
   const PAGE_LIMIT = 100;
-  const REQUEST_TIMEOUT_MS = 15000;
-  const DRAFT_CLEANUP_MS = 10 * 60 * 1000;
   const API_BASE = (() => {
     const path = window.location.pathname || '';
     return path.startsWith('/mynotes') ? '/mynotes/api' : '/api';
@@ -181,50 +179,12 @@ const Notes = (() => {
         break;
       }
 
-      console.info('[Notes] fetched notes page', {
-        offset,
-        count: notes.length,
-        ids: notes.map(note => note.id)
-      });
-
       for (const note of notes) {
-        const encryptedPayloadLength = typeof note.payload === 'string' ? note.payload.length : null;
         try {
           let payload = await Crypto.decryptPayload(encryptionKey, note.payload);
           payload = sanitizePayload(payload);
 
-          if (payload.type === 'image') {
-            const imgSize = typeof payload.img?.data === 'string' ? payload.img.data.length : 0;
-            console.info('[Notes] load image note', {
-              id: note.id,
-              draft: Boolean(payload.draft),
-              hasImg: Boolean(payload.img?.data),
-              imgSize
-            });
-          }
-
           if (payload.draft && isEmptyDraft(payload)) {
-            const noteTimestamp = Number.isFinite(note.updated_at)
-              ? note.updated_at
-              : Number.isFinite(note.created_at)
-                ? note.created_at
-                : payload.created_at;
-            const ageMs = Number.isFinite(noteTimestamp) ? Date.now() - noteTimestamp : null;
-
-            if (ageMs !== null && ageMs < DRAFT_CLEANUP_MS) {
-              console.info('[Notes] keeping recent draft note', {
-                id: note.id,
-                type: payload.type,
-                ageMs
-              });
-              continue;
-            }
-
-            console.warn('[Notes] deleting empty draft note', {
-              id: note.id,
-              type: payload.type,
-              ageMs
-            });
             try {
               await deleteNote(note.id);
             } catch (err) {
@@ -266,10 +226,7 @@ const Notes = (() => {
           notesCache.set(note.id, decryptedNote);
           decrypted.push(decryptedNote);
         } catch (err) {
-          console.warn('Failed to decrypt note:', note.id, {
-            error: err,
-            encryptedPayloadLength
-          });
+          console.warn('Failed to decrypt note:', note.id, err);
         }
       }
 
@@ -285,33 +242,19 @@ const Notes = (() => {
   async function createNote(type, data, color, position, options = {}) {
     const payload = createPayload(type, data, color, position, options);
     const encryptedPayload = await Crypto.encryptPayload(encryptionKey, payload);
-    const payloadSize = typeof encryptedPayload === 'string' ? encryptedPayload.length : 0;
-    const body = JSON.stringify({
-      board_id: boardId,
-      payload: encryptedPayload
+    
+    const response = await fetch(`${API_BASE}/notes/create`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        board_id: boardId,
+        payload: encryptedPayload
+      })
     });
-    const bodySize = body.length;
-
-    console.info('[Notes] create payload', { type, payloadSize, bodySize });
-
-    let response;
-    try {
-      response = await fetchWithTimeout(`${API_BASE}/notes/create`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body
-      }, { action: 'create', type, payloadSize, bodySize });
-    } catch (err) {
-      console.warn('[Notes] create fetch failed', { type, payloadSize, bodySize, error: err });
-      throw err;
-    }
 
     if (!response.ok) {
-      console.warn('[Notes] create failed', { status: response.status, type, payloadSize, bodySize });
       throw await buildRequestError(response, 'Failed to create note');
     }
-
-    console.info('[Notes] create ok', { status: response.status, type, payloadSize, bodySize });
     
     const { id } = await response.json();
     
@@ -338,39 +281,23 @@ const Notes = (() => {
     Object.assign(note.payload, updates);
     
     const encryptedPayload = await Crypto.encryptPayload(encryptionKey, note.payload);
-    const payloadSize = typeof encryptedPayload === 'string' ? encryptedPayload.length : 0;
-    const body = JSON.stringify({
-      board_id: boardId,
-      id,
-      payload: encryptedPayload
+    
+    const response = await fetch(`${API_BASE}/notes/update`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        board_id: boardId,
+        id,
+        payload: encryptedPayload
+      })
     });
-    const bodySize = body.length;
-    const type = note.payload?.type || 'unknown';
-
-    console.info('[Notes] update payload', { id, type, payloadSize, bodySize });
-
-    let response;
-    try {
-      response = await fetchWithTimeout(`${API_BASE}/notes/update`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body
-      }, { action: 'update', id, type, payloadSize, bodySize });
-    } catch (err) {
-      console.warn('[Notes] update fetch failed', { id, type, payloadSize, bodySize, error: err });
-      throw err;
-    }
     
     if (!response.ok) {
-      console.warn('[Notes] update failed', { status: response.status, id, type, payloadSize, bodySize });
       throw await buildRequestError(response, 'Failed to update note');
     }
-
-    console.info('[Notes] update ok', { status: response.status, id, type, payloadSize, bodySize });
   }
   
   async function deleteNote(id) {
-    console.warn('[Notes] delete request', { id });
     const response = await fetch(`${API_BASE}/notes/delete`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -381,11 +308,8 @@ const Notes = (() => {
     });
     
     if (!response.ok) {
-      console.warn('[Notes] delete failed', { id, status: response.status });
       throw await buildRequestError(response, 'Failed to delete note');
     }
-
-    console.info('[Notes] delete ok', { id, status: response.status });
     
     notesCache.delete(id);
   }
@@ -467,28 +391,6 @@ const Notes = (() => {
     };
   }
   
-  function fetchWithTimeout(url, options, context) {
-    if (typeof AbortController === 'undefined') {
-      return fetch(url, options);
-    }
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => {
-      controller.abort();
-    }, REQUEST_TIMEOUT_MS);
-
-    const requestOptions = { ...options, signal: controller.signal };
-
-    return fetch(url, requestOptions)
-      .catch((err) => {
-        if (err?.name === 'AbortError') {
-          console.warn('[Notes] request timed out', { ...context, timeoutMs: REQUEST_TIMEOUT_MS });
-        }
-        throw err;
-      })
-      .finally(() => clearTimeout(timeoutId));
-  }
-
   return {
     NOTE_SIZE,
     BOARD_WIDTH,
