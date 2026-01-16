@@ -251,6 +251,11 @@ app.use((err, req, res, next) => {
     console.warn('Request body too large', { path: req.path, contentLength });
     return res.status(413).json({ error: 'Payload too large' });
   }
+  if (err?.type === 'entity.parse.failed') {
+    const contentLength = req.headers['content-length'];
+    console.warn('Request body parse failed', { path: req.path, contentLength });
+    return res.status(400).json({ error: 'Invalid request body' });
+  }
   return next(err);
 });
 

@@ -6,6 +6,7 @@ const Notes = (() => {
   const COLORS = ['yellow', 'pink', 'blue', 'green', 'orange', 'lavender'];
   const COLOR_VARIANTS = ['', 'v1', 'v2'];
   const PAGE_LIMIT = 100;
+  const REQUEST_TIMEOUT_MS = 15000;
   const API_BASE = (() => {
     const path = window.location.pathname || '';
     return path.startsWith('/mynotes') ? '/mynotes/api' : '/api';
@@ -253,11 +254,11 @@ const Notes = (() => {
 
     let response;
     try {
-      response = await fetch(`${API_BASE}/notes/create`, {
+      response = await fetchWithTimeout(`${API_BASE}/notes/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body
-      });
+      }, { action: 'create', type, payloadSize, bodySize });
     } catch (err) {
       console.warn('[Notes] create fetch failed', { type, payloadSize, bodySize, error: err });
       throw err;
@@ -308,11 +309,11 @@ const Notes = (() => {
 
     let response;
     try {
-      response = await fetch(`${API_BASE}/notes/update`, {
+      response = await fetchWithTimeout(`${API_BASE}/notes/update`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body
-      });
+      }, { action: 'update', id, type, payloadSize, bodySize });
     } catch (err) {
       console.warn('[Notes] update fetch failed', { id, type, payloadSize, bodySize, error: err });
       throw err;
@@ -420,6 +421,28 @@ const Notes = (() => {
     };
   }
   
+  function fetchWithTimeout(url, options, context) {
+    if (typeof AbortController === 'undefined') {
+      return fetch(url, options);
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+    }, REQUEST_TIMEOUT_MS);
+
+    const requestOptions = { ...options, signal: controller.signal };
+
+    return fetch(url, requestOptions)
+      .catch((err) => {
+        if (err?.name === 'AbortError') {
+          console.warn('[Notes] request timed out', { ...context, timeoutMs: REQUEST_TIMEOUT_MS });
+        }
+        throw err;
+      })
+      .finally(() => clearTimeout(timeoutId));
+  }
+
   return {
     NOTE_SIZE,
     BOARD_WIDTH,
