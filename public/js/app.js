@@ -122,7 +122,7 @@ const App = (() => {
     setTextById('save-text-btn', modals?.text?.save);
 
     setTextById('image-modal-title', modals?.image?.title);
-    setTextById('image-drop-text', modals?.image?.dropZone);
+    setHtmlById('image-drop-text', modals?.image?.dropZone);
     setTextById('delete-image-btn', modals?.image?.delete);
     setTextById('cancel-image-btn', modals?.image?.cancel);
     setTextById('save-image-btn', modals?.image?.save);
