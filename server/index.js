@@ -249,7 +249,7 @@ if (require.main === module) {
   }
 
   app.listen(PORT, () => {
-    console.log(`MyNotes server running on http://localhost:${PORT}`);
+    console.log(`mynotes server running on http://localhost:${PORT}`);
   });
 }
 

@@ -187,7 +187,7 @@ const App = (() => {
       onNoteClick: handleNoteClick
     });
     
-    console.log('MyNotes initialized');
+    console.log('mynotes initialized');
   }
   
   function setupLoginEvents() {
@@ -615,6 +615,13 @@ const App = (() => {
 
     pendingSaveTimers.set(noteId, timerId);
   }
+
+  function clearPendingSaves() {
+    pendingSaveTimers.forEach((timerId) => clearTimeout(timerId));
+    pendingSaveTimers.clear();
+    pendingNoteUpdates.clear();
+    pendingSaveCount = 0;
+  }
   
   function logout() {
     const wasRemembering = rememberRoomCheckbox?.checked;
@@ -622,6 +629,10 @@ const App = (() => {
 
     currentBoardId = null;
     encryptionKey = null;
+    pendingDraftNoteId = null;
+    pendingDeleteNoteId = null;
+    currentEditNoteId = null;
+    clearPendingSaves();
     Board.clearNotes();
     stopNotesRefresh();
     stopRoomBackground();

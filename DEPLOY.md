@@ -1,4 +1,4 @@
-# MyNotes Deployment Guide
+# mynotes Deployment Guide
 
 ## Prerequisites
 

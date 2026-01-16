@@ -1,7 +1,7 @@
 {
   "name": "mynotes",
-  "version": "1.0.0",
-  "description": "E2E encrypted sticky note corkboard",
+  "version": "1.0.1",
+  "description": "client encrypted multiplayer corkboard",
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
