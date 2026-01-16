@@ -259,15 +259,21 @@ const DoodleEditor = (() => {
   }
   
   function createPreviewCanvas(doodleData) {
+    const rawW = Number.isFinite(doodleData?.w) ? doodleData.w : GRID_SIZE;
+    const rawH = Number.isFinite(doodleData?.h) ? doodleData.h : GRID_SIZE;
+    const safeW = Math.max(1, Math.min(GRID_SIZE, Math.floor(rawW)));
+    const safeH = Math.max(1, Math.min(GRID_SIZE, Math.floor(rawH)));
+    const data = typeof doodleData?.data === 'string' ? doodleData.data : '';
+
     const canvas = document.createElement('canvas');
-    canvas.width = doodleData.w;
-    canvas.height = doodleData.h;
+    canvas.width = safeW;
+    canvas.height = safeH;
     
     const ctx = canvas.getContext('2d');
-    const imageData = ctx.createImageData(doodleData.w, doodleData.h);
+    const imageData = ctx.createImageData(safeW, safeH);
     
-    const packed = new Uint8Array(Crypto.base64ToBuffer(doodleData.data));
-    const bits = ImageProcessor.unpackBits(packed, doodleData.w * doodleData.h);
+    const packed = new Uint8Array(Crypto.base64ToBuffer(data));
+    const bits = ImageProcessor.unpackBits(packed, safeW * safeH);
     
     for (let i = 0; i < bits.length; i++) {
       const idx = i * 4;

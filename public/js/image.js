@@ -166,17 +166,22 @@ const ImageProcessor = (() => {
   }
   
   function renderToCanvas(canvas, imgData) {
-    const { w, h, data } = imgData;
-    canvas.width = w;
-    canvas.height = h;
+    const rawW = Number.isFinite(imgData?.w) ? imgData.w : MAX_SIZE;
+    const rawH = Number.isFinite(imgData?.h) ? imgData.h : MAX_SIZE;
+    const safeW = Math.max(1, Math.min(MAX_SIZE, Math.floor(rawW)));
+    const safeH = Math.max(1, Math.min(MAX_SIZE, Math.floor(rawH)));
+    const data = typeof imgData?.data === 'string' ? imgData.data : '';
+
+    canvas.width = safeW;
+    canvas.height = safeH;
     
     const ctx = canvas.getContext('2d');
-    const imageData = ctx.createImageData(w, h);
+    const imageData = ctx.createImageData(safeW, safeH);
     
     const gray = new Uint8Array(Crypto.base64ToBuffer(data));
     const { r, g, b } = GRAPHITE_COLOR;
     
-    for (let i = 0; i < w * h; i++) {
+    for (let i = 0; i < safeW * safeH; i++) {
       const idx = i * 4;
       const value = gray[i] ?? 255;
       const alpha = 255 - value;

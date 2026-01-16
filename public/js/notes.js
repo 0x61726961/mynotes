@@ -52,6 +52,39 @@ const Notes = (() => {
     return COLORS[Math.floor(Math.random() * COLORS.length)];
   }
 
+  function sanitizePayload(payload) {
+    if (!payload || typeof payload !== 'object') {
+      payload = {};
+    }
+
+    if (!COLORS.includes(payload.color)) {
+      payload.color = COLORS[0];
+    }
+
+    const validTypes = ['text', 'image', 'doodle'];
+    if (!validTypes.includes(payload.type)) {
+      payload.type = 'text';
+    }
+
+    if (payload.type === 'text') {
+      payload.text = typeof payload.text === 'string' ? payload.text : '';
+    } else if (payload.type === 'image') {
+      payload.img = payload.img ?? null;
+    } else if (payload.type === 'doodle') {
+      payload.doodle = payload.doodle ?? null;
+    }
+
+    return payload;
+  }
+
+  function isEmptyDraft(payload) {
+    if (!payload || typeof payload !== 'object') return true;
+    if (payload.type === 'text') return !payload.text;
+    if (payload.type === 'image') return !payload.img;
+    if (payload.type === 'doodle') return !payload.doodle;
+    return true;
+  }
+
   function compareNotesForStacking(a, b) {
     const aTime = a.updatedAt ?? a.createdAt ?? a.payload?.created_at ?? 0;
     const bTime = b.updatedAt ?? b.createdAt ?? b.payload?.created_at ?? 0;
@@ -100,7 +133,6 @@ const Notes = (() => {
       rot: randomRotation(),
       color: color || randomColor(),
       created_at: Date.now(),
-      done: false,
       draft: Boolean(options.draft)
     };
     
@@ -149,10 +181,10 @@ const Notes = (() => {
 
       for (const note of notes) {
         try {
-          const payload = await Crypto.decryptPayload(encryptionKey, note.payload);
-          if (payload.done) continue;
+          let payload = await Crypto.decryptPayload(encryptionKey, note.payload);
+          payload = sanitizePayload(payload);
 
-          if (payload.draft) {
+          if (payload.draft && isEmptyDraft(payload)) {
             try {
               await deleteNote(note.id);
             } catch (err) {
@@ -160,6 +192,22 @@ const Notes = (() => {
             }
             continue;
           }
+
+          if (payload.draft) {
+            payload.draft = false;
+          }
+
+          const safeX = Number.isFinite(payload.x)
+            ? payload.x
+            : BOARD_WIDTH / 2 - NOTE_SIZE / 2;
+          const safeY = Number.isFinite(payload.y)
+            ? payload.y
+            : BOARD_HEIGHT / 2 - NOTE_SIZE / 2;
+          const clamped = clampPosition(safeX, safeY);
+          payload.x = clamped.x;
+          payload.y = clamped.y;
+
+          payload.rot = Number.isFinite(payload.rot) ? payload.rot : 0;
 
           const createdAt = Number.isFinite(note.created_at)
             ? note.created_at

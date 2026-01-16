@@ -34,12 +34,35 @@ global.ImageProcessor = ImageProcessor;
 global.DoodleEditor = DoodleEditor;
 
 describe('Image processing helpers', () => {
+  function createCanvasStub() {
+    const canvas = { width: 0, height: 0 };
+    const ctx = {
+      createImageData: jest.fn((width, height) => ({
+        data: new Uint8ClampedArray(width * height * 4)
+      })),
+      putImageData: jest.fn()
+    };
+    canvas.getContext = jest.fn(() => ctx);
+    return canvas;
+  }
+
   test('packBits/unpackBits round trip', () => {
     const bits = new Uint8Array([1, 0, 1, 1, 0, 0, 1, 0, 1, 0]);
     const packed = ImageProcessor.packBits(bits);
     const unpacked = ImageProcessor.unpackBits(packed, bits.length);
 
     expect(Array.from(unpacked)).toEqual(Array.from(bits));
+  });
+
+  test('renderToCanvas preserves valid dimensions', () => {
+    const canvas = createCanvasStub();
+    const gray = new Uint8Array([0, 255, 128, 64]);
+    const data = CryptoModule.bufferToBase64(gray.buffer);
+
+    ImageProcessor.renderToCanvas(canvas, { w: 2, h: 2, data });
+
+    expect(canvas.width).toBe(2);
+    expect(canvas.height).toBe(2);
   });
 });
 
@@ -93,5 +116,40 @@ describe('Doodle editor data handling', () => {
     DoodleEditor.setData({ w: DoodleEditor.GRID_SIZE, h: DoodleEditor.GRID_SIZE, data: base64 });
 
     expect(DoodleEditor.isEmpty()).toBe(false);
+  });
+
+  test('createPreviewCanvas preserves valid dimensions', () => {
+    const bits = new Uint8Array(16);
+    bits[0] = 1;
+    const packed = ImageProcessor.packBits(bits);
+    const base64 = CryptoModule.bufferToBase64(packed.buffer);
+
+    const ctx = {
+      createImageData: jest.fn((width, height) => ({
+        data: new Uint8ClampedArray(width * height * 4)
+      })),
+      putImageData: jest.fn()
+    };
+    const mockCanvas = {
+      width: 0,
+      height: 0,
+      getContext: jest.fn(() => ctx)
+    };
+
+    const originalCreateElement = document.createElement.bind(document);
+    const createElementSpy = jest
+      .spyOn(document, 'createElement')
+      .mockImplementation((tagName) => {
+        if (tagName === 'canvas') return mockCanvas;
+        return originalCreateElement(tagName);
+      });
+
+    const canvas = DoodleEditor.createPreviewCanvas({ w: 4, h: 4, data: base64 });
+
+    expect(canvas).toBe(mockCanvas);
+    expect(canvas.width).toBe(4);
+    expect(canvas.height).toBe(4);
+
+    createElementSpy.mockRestore();
   });
 });
