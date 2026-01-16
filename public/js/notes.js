@@ -267,6 +267,8 @@ const Notes = (() => {
       console.warn('[Notes] create failed', { status: response.status, type, payloadSize, bodySize });
       throw await buildRequestError(response, 'Failed to create note');
     }
+
+    console.info('[Notes] create ok', { status: response.status, type, payloadSize, bodySize });
     
     const { id } = await response.json();
     
@@ -320,6 +322,8 @@ const Notes = (() => {
       console.warn('[Notes] update failed', { status: response.status, id, type, payloadSize, bodySize });
       throw await buildRequestError(response, 'Failed to update note');
     }
+
+    console.info('[Notes] update ok', { status: response.status, id, type, payloadSize, bodySize });
   }
   
   async function deleteNote(id) {
