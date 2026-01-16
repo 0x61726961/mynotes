@@ -60,6 +60,10 @@ function getNotesPaged(boardId, limit, offset) {
   return stmts.getNotesPaged.all(boardId, limit, offset);
 }
 
+function getNote(boardId, noteId) {
+  return stmts.getNote.get(noteId, boardId);
+}
+
 function getNoteCount(boardId) {
   const row = stmts.getNoteCount.get(boardId);
   return row ? row.count : 0;
@@ -110,6 +114,7 @@ module.exports = {
   ensureBoard,
   getNotes,
   getNotesPaged,
+  getNote,
   getNoteCount,
   cleanupDeletedNotes,
   createNote,

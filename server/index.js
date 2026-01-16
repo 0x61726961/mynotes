@@ -210,6 +210,15 @@ apiRouter.post('/notes/update', updateLimiter, (req, res) => {
     if (!success) {
       return res.status(404).json({ error: 'Note not found' });
     }
+
+    const storedNote = db.getNote(board_id, id);
+    console.info('Notes update stored', {
+      board_id,
+      id,
+      exists: Boolean(storedNote),
+      deleted: storedNote?.deleted,
+      payloadLength: storedNote?.payload ? storedNote.payload.length : null
+    });
     
     res.json({ ok: true });
   } catch (err) {
