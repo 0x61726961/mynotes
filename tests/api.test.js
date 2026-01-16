@@ -139,6 +139,58 @@ describe('Notes API', () => {
     expect(listAfterDelete.body.notes).toHaveLength(0);
   });
 
+  test('lists notes updated since a timestamp', async () => {
+    const deltaBoardId = 'f'.repeat(64);
+
+    const createOne = await request(app)
+      .post('/api/notes/create')
+      .send({ board_id: deltaBoardId, payload });
+
+    expect(createOne.status).toBe(200);
+    const noteOneId = createOne.body.id;
+
+    const baseline = await request(app)
+      .post('/api/notes/list')
+      .send({ board_id: deltaBoardId });
+
+    const baselineTime = baseline.body.server_time - 1;
+    expect(Number.isFinite(baselineTime)).toBe(true);
+
+    const createTwo = await request(app)
+      .post('/api/notes/create')
+      .send({ board_id: deltaBoardId, payload: updatedPayload });
+
+    const noteTwoId = createTwo.body.id;
+
+    const updateOne = await request(app)
+      .post('/api/notes/update')
+      .send({ board_id: deltaBoardId, id: noteOneId, payload: updatedPayload });
+
+    expect(updateOne.status).toBe(200);
+
+    const deltaList = await request(app)
+      .post('/api/notes/list')
+      .send({ board_id: deltaBoardId, updated_since: baselineTime });
+
+    expect(deltaList.status).toBe(200);
+    expect(deltaList.body.notes).toHaveLength(2);
+    expect(deltaList.body.deleted).toEqual([]);
+
+    const deleteTwo = await request(app)
+      .post('/api/notes/delete')
+      .send({ board_id: deltaBoardId, id: noteTwoId });
+
+    expect(deleteTwo.status).toBe(200);
+
+    const deltaAfterDelete = await request(app)
+      .post('/api/notes/list')
+      .send({ board_id: deltaBoardId, updated_since: baselineTime });
+
+    expect(deltaAfterDelete.status).toBe(200);
+    expect(deltaAfterDelete.body.deleted).toContain(noteTwoId);
+    expect(deltaAfterDelete.body.notes.find((note) => note.id === noteTwoId)).toBeUndefined();
+  });
+
   test('validates note ids on update', async () => {
     const response = await request(app)
       .post('/api/notes/update')

@@ -26,7 +26,8 @@ const App = (() => {
   let isRefreshing = false;
   let lastLocalChangeAt = 0;
   const STRINGS = window.AppStrings || {};
-  const REFRESH_INTERVAL_MS = 5000;
+  const REFRESH_INTERVAL_MS = 3000;
+  const DELETED_RETENTION_MS = 24 * 60 * 60 * 1000;
   const DEFAULT_ROOM = resolveString(STRINGS.login?.passphrasePlaceholder, 'public');
   const REMEMBER_ROOM_KEY = 'mynotes.rememberRoom';
   const LAST_ROOM_KEY = 'mynotes.lastRoom';
@@ -426,7 +427,14 @@ const App = (() => {
     isRefreshing = true;
     
     try {
-      const notes = await Notes.loadNotes({ resetCache: true });
+      const lastServerTime = Notes.getLastServerTime();
+      const shouldReset = !Number.isFinite(lastServerTime) || lastServerTime <= 0
+        || Date.now() - lastServerTime > DELETED_RETENTION_MS;
+      const notes = await Notes.loadNotes(
+        shouldReset
+          ? { resetCache: true }
+          : { resetCache: false, updatedSince: lastServerTime }
+      );
       if (lastLocalChangeAt > refreshStartedAt) return;
       
       const orderedNotes = sortNotesForStacking(notes);

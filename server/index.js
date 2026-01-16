@@ -48,7 +48,7 @@ function createApiLimiter(options) {
 }
 
 const globalLimiter = createApiLimiter({ max: 200 });
-const listLimiter = createApiLimiter({ max: 60 });
+const listLimiter = createApiLimiter({ max: 90 });
 const updateLimiter = createApiLimiter({ max: 120 });
 const createLimiter = createApiLimiter({ max: 20 });
 const deleteLimiter = createApiLimiter({ max: 20 });
@@ -113,7 +113,7 @@ function cleanupDeletedNotes() {
 
 apiRouter.post('/notes/list', listLimiter, (req, res) => {
   try {
-    const { board_id, limit, offset } = req.body;
+    const { board_id, limit, offset, updated_since } = req.body;
     
     if (!isValidBoardId(board_id)) {
       return res.status(400).json({ error: 'Invalid board_id' });
@@ -130,11 +130,25 @@ apiRouter.post('/notes/list', listLimiter, (req, res) => {
       return res.status(400).json({ error: 'Invalid offset' });
     }
 
+    let parsedUpdatedSince = null;
+    if (updated_since !== undefined) {
+      const candidate = Number(updated_since);
+      if (!Number.isFinite(candidate) || candidate < 0) {
+        return res.status(400).json({ error: 'Invalid updated_since' });
+      }
+      parsedUpdatedSince = candidate;
+    }
+
     const safeLimit = Math.min(Math.floor(parsedLimit), LIST_PAGE_LIMIT);
     const safeOffset = Math.floor(parsedOffset);
 
-    const notes = db.getNotesPaged(board_id, safeLimit, safeOffset);
-    res.json({ notes });
+    const notes = parsedUpdatedSince === null
+      ? db.getNotesPaged(board_id, safeLimit, safeOffset)
+      : db.getNotesUpdatedSincePaged(board_id, parsedUpdatedSince, safeLimit, safeOffset);
+    const deleted = parsedUpdatedSince === null
+      ? []
+      : db.getDeletedNotesSince(board_id, parsedUpdatedSince);
+    res.json({ notes, deleted, server_time: Date.now() });
   } catch (err) {
     console.error('Error listing notes:', err);
     res.status(500).json({ error: 'Server error' });

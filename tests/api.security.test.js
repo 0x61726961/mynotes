@@ -87,6 +87,13 @@ describe('Notes API security validations', () => {
 
     expect(badOffset.status).toBe(400);
     expect(badOffset.body.error).toBe('Invalid offset');
+
+    const badUpdatedSince = await request(app)
+      .post('/api/notes/list')
+      .send({ board_id: validBoardId, updated_since: 'nope' });
+
+    expect(badUpdatedSince.status).toBe(400);
+    expect(badUpdatedSince.body.error).toBe('Invalid updated_since');
   });
 
   test('soft deletes notes via update deleted flag', async () => {

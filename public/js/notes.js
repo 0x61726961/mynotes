@@ -15,12 +15,14 @@ const Notes = (() => {
   let encryptionKey = null;
   let boardId = null;
   let stackCounter = 0;
+  let lastServerTime = 0;
   
   function init(bid, key) {
     boardId = bid;
     encryptionKey = key;
     notesCache.clear();
     stackCounter = 0;
+    lastServerTime = 0;
   }
   
   function randomRotation() {
@@ -147,11 +149,17 @@ const Notes = (() => {
     return payload;
   }
   
-  async function fetchNotesPage(offset = 0) {
+  async function fetchNotesPage(offset = 0, options = {}) {
+    const { updatedSince = null } = options;
+    const body = { board_id: boardId, limit: PAGE_LIMIT, offset };
+    if (Number.isFinite(updatedSince)) {
+      body.updated_since = updatedSince;
+    }
+
     const response = await fetch(`${API_BASE}/notes/list`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ board_id: boardId, limit: PAGE_LIMIT, offset })
+      body: JSON.stringify(body)
     });
     
     if (!response.ok) {
@@ -159,22 +167,37 @@ const Notes = (() => {
     }
 
     const data = await response.json();
-    return Array.isArray(data?.notes) ? data.notes : [];
+    return {
+      notes: Array.isArray(data?.notes) ? data.notes : [],
+      deleted: Array.isArray(data?.deleted) ? data.deleted : [],
+      serverTime: Number.isFinite(data?.server_time) ? data.server_time : null
+    };
   }
 
   async function loadNotes(options = {}) {
-    const { resetCache = true } = options;
+    const { resetCache = true, updatedSince = null } = options;
+    const effectiveUpdatedSince = resetCache ? null : updatedSince;
     
     if (resetCache) {
       notesCache.clear();
       stackCounter = 0;
+      lastServerTime = 0;
     }
-    
-    const decrypted = [];
+
     let offset = 0;
+    const deletedIds = new Set();
 
     while (true) {
-      const notes = await fetchNotesPage(offset);
+      const { notes, deleted, serverTime } = await fetchNotesPage(offset, {
+        updatedSince: effectiveUpdatedSince
+      });
+
+      if (Number.isFinite(serverTime)) {
+        lastServerTime = Math.max(lastServerTime, serverTime);
+      }
+
+      deleted.forEach((id) => deletedIds.add(id));
+
       if (notes.length === 0) {
         break;
       }
@@ -224,7 +247,6 @@ const Notes = (() => {
             variant: getVariant(note.id, payload)
           };
           notesCache.set(note.id, decryptedNote);
-          decrypted.push(decryptedNote);
         } catch (err) {
           console.warn('Failed to decrypt note:', note.id, err);
         }
@@ -235,8 +257,12 @@ const Notes = (() => {
         break;
       }
     }
+
+    if (deletedIds.size > 0) {
+      deletedIds.forEach((id) => notesCache.delete(id));
+    }
     
-    return applyStackOrder(decrypted);
+    return applyStackOrder(Array.from(notesCache.values()));
   }
   
   async function createNote(type, data, color, position, options = {}) {
@@ -316,6 +342,10 @@ const Notes = (() => {
   
   function getNote(id) {
     return notesCache.get(id) || null;
+  }
+
+  function getLastServerTime() {
+    return lastServerTime;
   }
 
   function setNoteRotation(id, rot) {
@@ -402,6 +432,7 @@ const Notes = (() => {
     updateNote,
     deleteNote,
     getNote,
+    getLastServerTime,
     setNoteRotation,
     touchNote,
     renderNote,
