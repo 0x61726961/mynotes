@@ -148,7 +148,7 @@ body.room-bg-active #room-bg {
 }
 
 .input-group input::placeholder {
-  color: #b4b4b4;
+  color: #808080;
 }
 
 .input-group input:focus {

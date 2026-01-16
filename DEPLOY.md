@@ -21,6 +21,8 @@ Use any process manager (pm2, systemd, etc.) and start:
 node server/index.js
 ```
 
+If you're running behind a reverse proxy (nginx, etc.), set `TRUST_PROXY=true` so Express will honor `X-Forwarded-*` headers (client IP/HTTPS).
+
 ## nginx Config
 
 ```nginx
