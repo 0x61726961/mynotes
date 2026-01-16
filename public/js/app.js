@@ -221,6 +221,13 @@ const App = (() => {
 
   function openAddFabMenu() {
     if (!addFabContainer || !addFabButton || !addFabMenu) return;
+
+    if (addFabButton.dataset.closedTitle === undefined) {
+      addFabButton.dataset.closedTitle = addFabButton.getAttribute('title') || '';
+    }
+
+    addFabButton.removeAttribute('title');
+
     addFabContainer.classList.add('open');
     addFabButton.setAttribute('aria-expanded', 'true');
     addFabMenu.setAttribute('aria-hidden', 'false');
@@ -228,9 +235,15 @@ const App = (() => {
 
   function closeAddFabMenu() {
     if (!addFabContainer || !addFabButton || !addFabMenu) return;
+
     addFabContainer.classList.remove('open');
     addFabButton.setAttribute('aria-expanded', 'false');
     addFabMenu.setAttribute('aria-hidden', 'true');
+
+    const title = addFabButton.dataset.closedTitle;
+    if (typeof title === 'string' && title.length > 0) {
+      addFabButton.setAttribute('title', title);
+    }
   }
 
   function toggleAddFabMenu() {
