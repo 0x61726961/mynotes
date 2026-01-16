@@ -221,6 +221,9 @@ apiRouter.post('/notes/update', updateLimiter, (req, res) => {
 apiRouter.post('/notes/delete', deleteLimiter, (req, res) => {
   try {
     const { board_id, id } = req.body;
+    const contentLength = req.headers['content-length'];
+
+    console.info('Notes delete request', { board_id, id, contentLength });
     
     if (!isValidBoardId(board_id)) {
       return res.status(400).json({ error: 'Invalid board_id' });

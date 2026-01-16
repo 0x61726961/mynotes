@@ -521,6 +521,10 @@ const App = (() => {
   async function discardDraftNote() {
     if (!pendingDraftNoteId) return;
     const draftId = pendingDraftNoteId;
+    console.warn('[App] discarding draft note', {
+      draftId,
+      currentEditNoteId
+    });
     pendingDraftNoteId = null;
     currentEditNoteId = null;
 

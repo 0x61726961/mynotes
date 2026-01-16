@@ -180,6 +180,12 @@ const Notes = (() => {
         break;
       }
 
+      console.info('[Notes] fetched notes page', {
+        offset,
+        count: notes.length,
+        ids: notes.map(note => note.id)
+      });
+
       for (const note of notes) {
         const encryptedPayloadLength = typeof note.payload === 'string' ? note.payload.length : null;
         try {
@@ -346,6 +352,7 @@ const Notes = (() => {
   }
   
   async function deleteNote(id) {
+    console.warn('[Notes] delete request', { id });
     const response = await fetch(`${API_BASE}/notes/delete`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -356,8 +363,11 @@ const Notes = (() => {
     });
     
     if (!response.ok) {
+      console.warn('[Notes] delete failed', { id, status: response.status });
       throw await buildRequestError(response, 'Failed to delete note');
     }
+
+    console.info('[Notes] delete ok', { id, status: response.status });
     
     notesCache.delete(id);
   }
