@@ -89,6 +89,8 @@ function updateNote(boardId, noteId, payload, deleted) {
   
   if (deleted !== undefined) {
     stmts.setDeleted.run(deleted ? 1 : 0, now, noteId, boardId);
+  } else if (payload !== undefined) {
+    stmts.setDeleted.run(0, now, noteId, boardId);
   }
   
   if (payload !== undefined) {
