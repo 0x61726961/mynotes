@@ -69,7 +69,11 @@ const ImageProcessor = (() => {
     
     for (let i = 0; i < gray.length; i++) {
       const idx = i * 4;
-      gray[i] = Math.round(0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2]);
+      const alpha = data[idx + 3] / 255;
+      const r = data[idx] * alpha + 255 * (1 - alpha);
+      const g = data[idx + 1] * alpha + 255 * (1 - alpha);
+      const b = data[idx + 2] * alpha + 255 * (1 - alpha);
+      gray[i] = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
     }
     
     return gray;
