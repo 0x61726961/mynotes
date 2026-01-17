@@ -7,7 +7,7 @@ window.AppStrings = {
     passphrasePlaceholder: 'the-fun-zone',
     rememberRoom: 'Auto-join?',
     openBoard: 'Join Room',
-    hintHtml: 'a little thang made by aria unicornfan <img src="assets/beandog.png" alt="beandog" width="32" height="18" style="vertical-align: text-bottom; margin-left: 4px; display: inline-block;" /><br><br> collaborative sticky note board with client-side encryption. keep your room name secret to post some notes for yourself or share it and post with pals! no accounts, no cookies, no bullshit - the room name is the only way in. even my server owner ass can\'t snoop on ya. don\'t trust me...?<br><br>...then don\'t! roll your own server instead! <br><a href="https://github.com/0x61726961/mynotes" target="_blank" rel="noopener noreferrer">source</a>'
+    hintHtml: 'collaborative sticky note board with client-side encryption. keep your room name secret for a personal pinboard or share it and post with pals! no accounts, no cookies, and no prying eyes — even mine.<br><br>don\'t trust me? roll your own! <a href="https://github.com/0x61726961/mynotes" target="_blank" rel="noopener noreferrer">source</a><br><br>made with love by aria unicornfan <img src="assets/beandog.png" alt="beandog" width="32" height="18" style="vertical-align: text-bottom; margin-left: 4px; display: inline-block;" />'
   },
   board: {
     leaveBoardTitle: 'Leave Room',
