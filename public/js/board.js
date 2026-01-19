@@ -5,13 +5,21 @@ const Board = (() => {
   const DOUBLE_TAP_DELAY = 350;
   const DOUBLE_TAP_DISTANCE = 20;
   const DRAG_START_DISTANCE = 6;
+  const MIN_ZOOM = 0.5;
+  const MAX_ZOOM = 2;
+  const WHEEL_ZOOM_SPEED = 0.0015;
   let viewport = null;
   let corkboard = null;
   let panOffset = { x: 0, y: 0 };
+  let zoom = 1;
   let isPanning = false;
   let panStart = { x: 0, y: 0 };
   let panRafId = null;
   let pendingPanPoint = null;
+
+  let isPinching = false;
+  let pinchStartDist = 0;
+  let pinchStartZoom = 0;
   
   let draggedNote = null;
   let dragOffset = { x: 0, y: 0 };
@@ -56,6 +64,8 @@ const Board = (() => {
     viewport.addEventListener('touchmove', handleTouchPanMove, { passive: false });
     viewport.addEventListener('touchend', handleTouchPanEnd);
     viewport.addEventListener('touchcancel', handleTouchPanEnd);
+
+    viewport.addEventListener('wheel', handleWheelZoom, { passive: false });
     
     window.addEventListener('resize', centerBoard);
   }
@@ -63,26 +73,53 @@ const Board = (() => {
   function centerBoard() {
     const vw = viewport.clientWidth;
     const vh = viewport.clientHeight;
-    
-    panOffset.x = (vw - Notes.BOARD_WIDTH) / 2;
-    panOffset.y = (vh - Notes.BOARD_HEIGHT) / 2;
-    
+
+    panOffset.x = (vw - Notes.BOARD_WIDTH * zoom) / 2;
+    panOffset.y = (vh - Notes.BOARD_HEIGHT * zoom) / 2;
+
     updateBoardPosition();
   }
-  
+
   function updateBoardPosition() {
-    corkboard.style.transform = `translate3d(${panOffset.x}px, ${panOffset.y}px, 0)`;
+    corkboard.style.transform = `translate3d(${panOffset.x}px, ${panOffset.y}px, 0) scale(${zoom})`;
   }
-  
+
+  function clampZoom(nextZoom) {
+    return Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, nextZoom));
+  }
+
+  function screenToBoard(clientX, clientY) {
+    const rect = corkboard.getBoundingClientRect();
+    return {
+      x: (clientX - rect.left) / zoom,
+      y: (clientY - rect.top) / zoom
+    };
+  }
+
+  function setZoomAtPoint(nextZoom, clientX, clientY) {
+    const prevZoom = zoom;
+    zoom = clampZoom(nextZoom);
+
+    if (zoom === prevZoom) return;
+
+    // To zoom anchored at point:
+    // newOffset = mouse - (mouse - oldOffset) * (newZoom / oldZoom)
+    panOffset.x = clientX - (clientX - panOffset.x) * (zoom / prevZoom);
+    panOffset.y = clientY - (clientY - panOffset.y) * (zoom / prevZoom);
+
+    clampPanOffset();
+    updateBoardPosition();
+  }
+
   function clampPanOffset() {
     const vw = viewport.clientWidth;
     const vh = viewport.clientHeight;
-    const bw = Notes.BOARD_WIDTH;
-    const bh = Notes.BOARD_HEIGHT;
-    
+    const bw = Notes.BOARD_WIDTH * zoom;
+    const bh = Notes.BOARD_HEIGHT * zoom;
+
     // Keep at least 100px of board visible
     const minVisible = 100;
-    
+
     panOffset.x = Math.max(minVisible - bw, Math.min(vw - minVisible, panOffset.x));
     panOffset.y = Math.max(minVisible - bh, Math.min(vh - minVisible, panOffset.y));
   }
@@ -99,8 +136,8 @@ const Board = (() => {
     const boardRect = corkboard.getBoundingClientRect();
     const centerX = viewportRect.left + viewportRect.width / 2;
     const centerY = viewportRect.top + viewportRect.height / 2;
-    const x = centerX - boardRect.left - Notes.NOTE_SIZE / 2;
-    const y = centerY - boardRect.top - Notes.NOTE_SIZE / 2;
+    const x = (centerX - boardRect.left) / zoom - Notes.NOTE_SIZE / 2;
+    const y = (centerY - boardRect.top) / zoom - Notes.NOTE_SIZE / 2;
 
     return Notes.clampPosition(x, y);
   }
@@ -150,8 +187,26 @@ const Board = (() => {
     }
     viewport.classList.remove('dragging');
   }
+
+  function handleWheelZoom(e) {
+    if (isDragging || isRotating) return;
+    e.preventDefault();
+    const delta = -e.deltaY * WHEEL_ZOOM_SPEED;
+    const nextZoom = zoom * (1 + delta);
+    setZoomAtPoint(nextZoom, e.clientX, e.clientY);
+  }
   
   function handleTouchPanStart(e) {
+    if (e.touches.length === 2) {
+      isPanning = false;
+      isPinching = true;
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      pinchStartDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+      pinchStartZoom = zoom;
+      e.preventDefault();
+      return;
+    }
     if (e.touches.length !== 1) return;
     if (e.target !== corkboard && e.target !== viewport) return;
 
@@ -170,8 +225,21 @@ const Board = (() => {
   }
   
   function handleTouchPanMove(e) {
+    if (isPinching && e.touches.length === 2 && pinchStartDist > 0) {
+      e.preventDefault();
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+      const midpoint = {
+        x: (t1.clientX + t2.clientX) / 2,
+        y: (t1.clientY + t2.clientY) / 2
+      };
+      const nextZoom = pinchStartZoom * (dist / pinchStartDist);
+      setZoomAtPoint(nextZoom, midpoint.x, midpoint.y);
+      return;
+    }
     if (!isPanning || e.touches.length !== 1) return;
-    
+
     e.preventDefault();
     const touch = e.touches[0];
     pendingPanPoint = { x: touch.clientX, y: touch.clientY };
@@ -181,6 +249,7 @@ const Board = (() => {
   
   function handleTouchPanEnd() {
     isPanning = false;
+    isPinching = false;
     pendingPanPoint = null;
     if (panRafId) {
       cancelAnimationFrame(panRafId);
@@ -208,8 +277,8 @@ const Board = (() => {
     const centerY = rect.top + rect.height / 2;
     const angle = -(getNoteRotation(noteEl) * Math.PI) / 180;
 
-    const dx = clientX - centerX;
-    const dy = clientY - centerY;
+    const dx = (clientX - centerX) / zoom;
+    const dy = (clientY - centerY) / zoom;
     const localX = dx * Math.cos(angle) - dy * Math.sin(angle);
     const localY = dx * Math.sin(angle) + dy * Math.cos(angle);
 
@@ -298,16 +367,16 @@ const Board = (() => {
     resetTapState();
 
     liftNoteForDrag(noteEl);
-    
+
     const rect = noteEl.getBoundingClientRect();
     const boardRect = corkboard.getBoundingClientRect();
-    
+
     const noteX = parseFloat(noteEl.style.left);
     const noteY = parseFloat(noteEl.style.top);
-    
-    dragOffset.x = clientX - boardRect.left - noteX;
-    dragOffset.y = clientY - boardRect.top - noteY;
-    
+
+    dragOffset.x = (clientX - boardRect.left) / zoom - noteX;
+    dragOffset.y = (clientY - boardRect.top) / zoom - noteY;
+
     noteEl.classList.add('dragging');
   }
   
@@ -353,10 +422,10 @@ const Board = (() => {
   
   function moveNoteTo(clientX, clientY) {
     const boardRect = corkboard.getBoundingClientRect();
-    
-    let x = clientX - boardRect.left - dragOffset.x;
-    let y = clientY - boardRect.top - dragOffset.y;
-    
+
+    let x = (clientX - boardRect.left) / zoom - dragOffset.x;
+    let y = (clientY - boardRect.top) / zoom - dragOffset.y;
+
     const clamped = Notes.clampPosition(x, y);
     
     const rot = getNoteRotation(draggedNote);

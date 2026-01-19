@@ -441,6 +441,7 @@ body.room-bg-active #room-bg {
   overflow: hidden;
   position: relative;
   cursor: grab;
+  touch-action: none;
 }
 
 #board-viewport.dragging {
@@ -454,6 +455,7 @@ body.room-bg-active #room-bg {
   height: var(--board-height);
   background: linear-gradient(135deg, #c7aa78 0%, #b89463 100%);
   will-change: transform;
+  transform-origin: 0 0;
   box-shadow: 0 0 0 3px rgba(47, 43, 36, 0.12), 0 12px 24px rgba(47, 43, 36, 0.18);
   border: 6px solid var(--cork-dark);
 }
